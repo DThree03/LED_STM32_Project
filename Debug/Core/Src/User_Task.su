@@ -1,0 +1,11 @@
+../Core/Src/User_Task.c:76:6:Task_Mode_Cfg	4	static
+../Core/Src/User_Task.c:81:9:Task_User_Init	32	static
+../Core/Src/User_Task.c:116:6:Task_4_Player	40	static
+../Core/Src/User_Task.c:311:6:Task_500ms	16	static
+../Core/Src/User_Task.c:352:6:Task_Clear_Display	16	static
+../Core/Src/User_Task.c:359:6:Task_led_xl	16	static
+../Core/Src/User_Task.c:364:6:Task_Blink_Line	24	static
+../Core/Src/User_Task.c:370:13:Task_Upload_Display	16	static
+../Core/Src/User_Task.c:380:13:update_led7_data	56	static
+../Core/Src/User_Task.c:393:16:get_player_available	16	static
+../Core/Src/User_Task.c:428:13:delay_ms	16	static
