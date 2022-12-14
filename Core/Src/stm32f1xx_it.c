@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "IO_Button.h"
 #include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,12 +39,14 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define TASK1 10
-#define TASK2 1000
+#define TASK1 100
+#define TASK2 100
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+static volatile uint32_t tempCode;
+static volatile uint8_t bitIndex;
 
 /* USER CODE END PV */
 
@@ -59,10 +62,9 @@
 
 /* External variables --------------------------------------------------------*/
 extern TIM_HandleTypeDef htim2;
-extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
-
+extern TIM_HandleTypeDef htim1;
 extern structIO_Button strIO_Button_Value;
 extern structIO_Button strOld_Button_Value;
 
@@ -72,6 +74,8 @@ extern volatile uint32_t uCountDelay;
 
 extern volatile uint8_t Task1_Flag;
 extern volatile uint8_t Task2_Flag;
+
+extern volatile uint32_t IRcode;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -134,20 +138,6 @@ void TIM2_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles USART1 global interrupt.
-  */
-void USART1_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART1_IRQn 0 */
-
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
   * @brief This function handles USART3 global interrupt.
   */
 void USART3_IRQHandler(void)
@@ -159,6 +149,94 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
 
   /* USER CODE END USART3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+	if(HAL_GPIO_ReadPin(IR_SIGNAL_GPIO_Port, IR_SIGNAL_Pin) == GPIO_PIN_RESET)
+	{
+		__HAL_TIM_SET_COUNTER(&htim1, 0);
+	}
+	else
+	{
+		if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
+		{
+			tempCode |= (1UL << (31-bitIndex));   // write 1
+		}
+		else
+		{
+			tempCode &= ~(1UL << (31-bitIndex));  // write 0
+		}
+
+		bitIndex++;
+		if(bitIndex == 24)
+		{
+			IRcode = tempCode >> 8; // Second last 8 bits
+
+			 //Do your main work HERE
+			printf("IR Code 0x%x\n", (int)IRcode);
+
+			tempCode = 0;
+			bitIndex = 0;
+		}
+	}
+//	if (__HAL_TIM_GET_COUNTER(&htim1) > 8000)
+//	{
+//		tempCode = 0;
+//		bitIndex = 0;
+//	}
+//	else if (__HAL_TIM_GET_COUNTER(&htim1) > 1700)
+//	{
+//		tempCode |= (1UL << (31-bitIndex));   // write 1
+//		bitIndex++;
+//	}
+//	else if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
+//	{
+//		tempCode &= ~(1UL << (31-bitIndex));  // write 0
+//		bitIndex++;
+//	}
+//
+//	if(bitIndex == 32)
+//	{
+//		cmdli = ~tempCode; // Logical inverted last 8 bits
+//		cmd = tempCode >> 8; // Second last 8 bits
+//		if(cmdli == cmd) // Check for errors
+//		{
+//			IRcode = tempCode; // If no bit errors
+			// Do your main work HERE
+
+//			switch (code)
+//			{
+//				case (16753245):
+//				SSD1306_Puts ("CH-", &Font_16x26, 1);
+//				break;
+//
+//				case (16736925):
+//				SSD1306_Puts ("CH", &Font_16x26, 1);
+//				break;
+//
+//				case (16769565):
+//				SSD1306_Puts ("CH+", &Font_16x26, 1);
+//				break;
+//
+//				default :
+//				break;
+//			}
+//		}
+//		bitIndex = 0;
+//	}
+//	bitIndex++;
+//	__HAL_TIM_SET_COUNTER(&htim1, 0);
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(IR_SIGNAL_Pin);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

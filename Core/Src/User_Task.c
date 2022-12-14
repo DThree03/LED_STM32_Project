@@ -9,6 +9,7 @@
 #include "main.h"
 #include "IO_Button.h"
 #include "TM1637_MAIN.h"
+#include "FLASH_PAGE.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -17,11 +18,25 @@ typedef enum{
 	E_CFG_START_POINT,
 	E_CFG_ROUNDTIME_M,
 	E_CFG_TURNTIME_S,
-	E_CFG_START_MODE,
-	E_CFG_STARTUP_TIME
+	E_CFG_START_MODE
 }eUSER_CFG_STATE;
 
+typedef union Struct_Flash_Cfg
+{
+	struct{
+		uint8_t	 playing_mode;
+		uint8_t  startup_time_m;
+		uint16_t start_point;
+		uint16_t turn_time_s;
+		uint16_t rount_time_m;
+		uint8_t	 mode_signed;
+		uint8_t	 Reversed[3];
+	}Parameter;
+	uint32_t paraBuffer[3];
+}Str_Cfg_Para;
+
 typedef struct{
+	uint8_t		status;
 	uint8_t		ledxl_mask;
 	uint8_t 	addr;
 	uint8_t		sum_signed;
@@ -34,9 +49,11 @@ typedef struct{
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define LAST_MODE		2
+#define MODE_SIGN		1
 #define BEGIN_POINT		30
 #define TURN_TIME_S		45
 #define ROUND_TIME_M	30
+#define STARTUP_TIME_M	60
 
 #define MAX_PLAYER_NUM	4
 
@@ -44,6 +61,11 @@ typedef struct{
 #define UPDATE_LED7_TYPE    2
 #define DATA_LEDXL_TYPE     3
 #define UPDATE_BLINK_STATE  4
+
+#define IR_PUSH_CODE	0x908908
+#define IR_MINUS_CODE	0x904904
+#define IR_NEXT_CODE	0x910910
+#define IR_STOP_CODE	0x920920
 /* USER CODE END PM */
 
 /* Public variables ---------------------------------------------------------*/
@@ -56,72 +78,101 @@ volatile uint32_t uCountDelay = 0;
 volatile uint8_t Task1_Flag = 0;
 volatile uint8_t Task2_Flag = 0;
 
+volatile uint32_t IRcode = 0;
 /* Private variables ---------------------------------------------------------*/
 static uint8_t pTask_1st_Flag;
+static uint8_t pCfg_1st_state_Flag = 1;
 /*	Read from FLASH	 */
-static uint16_t start_point;
-static uint16_t turn_time_s;
-static uint32_t rount_time_m;
+static Str_Cfg_Para PlayCfg;
 
-static uint8_t last_playing_mode;
-static uint8_t startup_time_s;
+static uint16_t turn_time_s;
+static uint16_t rount_time_m;
 /**********************************************/
-static uint32_t all_turn_cnt = 1;
+static uint32_t all_turn_cnt;
 static float	last_average;
 static uint16_t hit_get_point_cnt;
 
 static player_data_t Player[MAX_PLAYER_NUM];
-//static uint8_t random_addr_buff[MAX_PLAYER_NUM];
+
 static uint8_t current_player;
 static uint8_t point_plus;
-static uint16_t temp_s = 0;
-/* Private function prototypes -----------------------------------------------*/
-static uint8_t get_player_available(void);
 
+static uint16_t temp_s = 0;
+static uint8_t stop_time;
+static uint8_t buzzer_stt = 0xFF;
+/* Private function prototypes -----------------------------------------------*/
 static void Task_Upload_Display(void);
 static void update_led7_data(uint8_t player_num);
 
-//static uint8_t update_rand_addr(void);
+static uint8_t get_player_available(void);
+static uint8_t get_next_user(uint8_t current_play);
+static void update_rand_addr(void);
+
 static void delay_ms(unsigned int x);
 
 /* Public function -----------------------------------------------------------*/
+void Task_Read_Cfg(void)
+{
+	Flash_Read_Data(USER_INFO_FLASH_ADDR, PlayCfg.paraBuffer, 3);
+	if(PlayCfg.Parameter.playing_mode == 0xFF)
+	{
+		PlayCfg.Parameter.start_point = BEGIN_POINT;
+		PlayCfg.Parameter.turn_time_s = TURN_TIME_S;
+		PlayCfg.Parameter.rount_time_m = ROUND_TIME_M;
+		PlayCfg.Parameter.playing_mode = LAST_MODE;
+		PlayCfg.Parameter.startup_time_m = STARTUP_TIME_M;
+		PlayCfg.Parameter.mode_signed = MODE_SIGN;
+		Flash_Write_Data(USER_INFO_FLASH_ADDR, PlayCfg.paraBuffer, 3);
+	}
+	pCfg_1st_state_Flag = 1;
+}
+
+void Task_Save_Cfg(void)
+{
+	Flash_Write_Data(USER_INFO_FLASH_ADDR, PlayCfg.paraBuffer, 3);
+}
+
 void Task_Mode_Cfg(void)
 {
 	static eUSER_CFG_STATE cfg_state_t = E_CFG_START_POINT;
-	static uint8_t pCfg_1st_state_Flag = 1;
+	//static uint8_t pCfg_1st_state_Flag = 1;
 	switch(cfg_state_t)
 	{
 		case E_CFG_START_POINT:
 		{
 			if(pCfg_1st_state_Flag){
 				pCfg_1st_state_Flag = 0;
-				//Read from FLASH
-				start_point = (int)BEGIN_POINT;
-				//Clear old display and blink
-
 				//Send Display and Blink Start point
-
+				Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 			}
-			//Check button
-			if(PLUS_BUT_STATE == eButtonSingleClick)
+
+			if((PLUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_PUSH_CODE))
 			{
 				PLUS_BUT_STATE = eButtonHoldOff;
-				if(start_point<99)
-					start_point++;
+				IRcode = 0;
+				if(PlayCfg.Parameter.start_point<99)
+					PlayCfg.Parameter.start_point++;
 				//Update Display
-
-			}else if(MINUS_BUT_STATE == eButtonSingleClick){
+				Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
+				buzzer_stt = 1;
+			}
+			else if((MINUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_MINUS_CODE)){
 				MINUS_BUT_STATE = eButtonHoldOff;
-				if(start_point > 0)
-					start_point--;
+				IRcode = 0;
+				if(PlayCfg.Parameter.start_point > 0)
+					PlayCfg.Parameter.start_point--;
 				//Update Display
-
-			}else if(NEXT_BUT_STATE == eButtonSingleClick){
+				Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
+				buzzer_stt = 1;
+			}
+			else if((NEXT_BUT_STATE == eButtonSingleClick) || (IRcode == IR_NEXT_CODE)){
 				NEXT_BUT_STATE = eButtonHoldOff;
-				//Save flash
-
+				IRcode = 0;
 				cfg_state_t++;
 				pCfg_1st_state_Flag = 1;
+				//Clear old display and blink
+				Task_Led_StartPoint(12, 12, 12);
+				buzzer_stt = 1;
 			}
 			break;
 		}
@@ -129,34 +180,44 @@ void Task_Mode_Cfg(void)
 		{
 			if(pCfg_1st_state_Flag){
 				pCfg_1st_state_Flag = 0;
-				//Read from FLASH
-				rount_time_m = (int)ROUND_TIME_M;
-				//Clear old display and blink
 
 				//Send Display and Blink Start point
-				Led7RoundTime_Display((rount_time_m/60)/10, (rount_time_m/60)%10, (rount_time_m%60)/10, (rount_time_m%60)%10);
+				Led7RoundTime_Display((PlayCfg.Parameter.rount_time_m/60)/10,
+									  (PlayCfg.Parameter.rount_time_m/60)%10,
+									  (PlayCfg.Parameter.rount_time_m%60)/10,
+									  (PlayCfg.Parameter.rount_time_m%60)%10);
 			}
 			//Check button
-			if(PLUS_BUT_STATE == eButtonSingleClick)
+			if((PLUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_PUSH_CODE))
 			{
 				PLUS_BUT_STATE = eButtonHoldOff;
-				if((rount_time_m/60) < 99)
-					rount_time_m++;
+				IRcode = 0;
+				if((PlayCfg.Parameter.rount_time_m/60) < 99)
+					PlayCfg.Parameter.rount_time_m++;
 				//Update Display
-				Led7RoundTime_Display((rount_time_m/60)/10, (rount_time_m/60)%10, (rount_time_m%60)/10, (rount_time_m%60)%10);
-			}else if(MINUS_BUT_STATE == eButtonSingleClick){
+				Led7RoundTime_Display((PlayCfg.Parameter.rount_time_m/60)/10,
+									  (PlayCfg.Parameter.rount_time_m/60)%10,
+									  (PlayCfg.Parameter.rount_time_m%60)/10,
+									  (PlayCfg.Parameter.rount_time_m%60)%10);
+				buzzer_stt = 1;
+			}else if((MINUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_MINUS_CODE)){
 				MINUS_BUT_STATE = eButtonHoldOff;
-				if(rount_time_m > 0)
-					rount_time_m--;
+				IRcode = 0;
+				if(PlayCfg.Parameter.rount_time_m > 0)
+					PlayCfg.Parameter.rount_time_m--;
 				//Update Display
-				Led7RoundTime_Display((rount_time_m/60)/10, (rount_time_m/60)%10, (rount_time_m%60)/10, (rount_time_m%60)%10);
-			}else if(NEXT_BUT_STATE == eButtonSingleClick){
+				Led7RoundTime_Display((PlayCfg.Parameter.rount_time_m/60)/10,
+									  (PlayCfg.Parameter.rount_time_m/60)%10,
+									  (PlayCfg.Parameter.rount_time_m%60)/10,
+									  (PlayCfg.Parameter.rount_time_m%60)%10);
+				buzzer_stt = 1;
+			}else if((NEXT_BUT_STATE == eButtonSingleClick) || (IRcode == IR_NEXT_CODE)){
 				NEXT_BUT_STATE = eButtonHoldOff;
-				//Save flash
-
+				IRcode = 0;
 				cfg_state_t++;
 				pCfg_1st_state_Flag = 1;
 				Led7RoundTime_Display(10, 10, 10, 10);
+				buzzer_stt = 1;
 			}
 			break;
 		}
@@ -164,36 +225,39 @@ void Task_Mode_Cfg(void)
 		{
 			if(pCfg_1st_state_Flag){
 				pCfg_1st_state_Flag = 0;
-				//Read from FLASH
-				turn_time_s = (int)TURN_TIME_S;
 				//Send Display and Blink Start point
-				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 0, 0);
+				Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
+				buzzer_stt = 1;
 			}
 			//Check button
-			if(PLUS_BUT_STATE == eButtonSingleClick)
+			if((PLUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_PUSH_CODE))
 			{
 				PLUS_BUT_STATE = eButtonHoldOff;
-				if(turn_time_s < 99)
-					turn_time_s++;
+				IRcode = 0;
+				if(PlayCfg.Parameter.turn_time_s < 99)
+					PlayCfg.Parameter.turn_time_s++;
 				else
-					turn_time_s = 0;
+					PlayCfg.Parameter.turn_time_s = 0;
 				//Update Display
-				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 0, 0);
-			}else if(MINUS_BUT_STATE == eButtonSingleClick){
+				Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
+				buzzer_stt = 1;
+			}else if((MINUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_MINUS_CODE)){
 				MINUS_BUT_STATE = eButtonHoldOff;
-				if(turn_time_s > 0)
-					turn_time_s--;
+				IRcode = 0;
+				if(PlayCfg.Parameter.turn_time_s > 0)
+					PlayCfg.Parameter.turn_time_s--;
 				else
-					turn_time_s = 99;
+					PlayCfg.Parameter.turn_time_s = 99;
 				//Update Display
-				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 0, 0);
-			}else if(NEXT_BUT_STATE == eButtonSingleClick){
+				Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
+				buzzer_stt = 1;
+			}else if((NEXT_BUT_STATE == eButtonSingleClick) || (IRcode == IR_NEXT_CODE)){
 				NEXT_BUT_STATE = eButtonHoldOff;
-				//Save flash
-
+				IRcode = 0;
 				cfg_state_t++;
 				pCfg_1st_state_Flag = 1;
 				Led7TurnTime_Display(10, 10, 0, 0);
+				buzzer_stt = 1;
 			}
 			break;
 		}
@@ -201,100 +265,156 @@ void Task_Mode_Cfg(void)
 		{
 			if(pCfg_1st_state_Flag){
 				pCfg_1st_state_Flag = 0;
-				//Read from FLASH
-				last_playing_mode = (int)LAST_MODE;
-				//Send Display and Blink Start point
+				if(PlayCfg.Parameter.mode_signed == 0xFF)
+					PlayCfg.Parameter.mode_signed = 1;
 
+				Task_Led_StartPoint(12, PlayCfg.Parameter.playing_mode*2, 10 + PlayCfg.Parameter.mode_signed);
+				//Send Display and Blink Start point
+				for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++){
+					Task_led_xl(i+1, 0x0F);
+				}
 			}
 			//Check button
-			if(PLUS_BUT_STATE == eButtonSingleClick)
+			if((PLUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_PUSH_CODE))
 			{
 				PLUS_BUT_STATE = eButtonHoldOff;
-				last_playing_mode++;
-				if(last_playing_mode > 2)
-					last_playing_mode = 0;
-				//Update Display
+				IRcode = 0;
 
-			}else if(MINUS_BUT_STATE == eButtonSingleClick){
+				PlayCfg.Parameter.playing_mode++;
+				if(PlayCfg.Parameter.playing_mode > 2)
+				{
+					for(int i=0;i<(int)MAX_PLAYER_NUM;i++){
+						Task_led_xl(i+1, 0x00);
+					}
+					PlayCfg.Parameter.playing_mode = 1;
+					PlayCfg.Parameter.mode_signed = 1 - PlayCfg.Parameter.mode_signed;
+				}
+				//Update Display
+				Task_Led_StartPoint(12, PlayCfg.Parameter.playing_mode*2, 10 + PlayCfg.Parameter.mode_signed);
+				for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++){
+					Task_led_xl(i+1, 0x0F);
+				}
+				buzzer_stt = 1;
+			}else if((MINUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_MINUS_CODE)){
 				MINUS_BUT_STATE = eButtonHoldOff;
-				if(last_playing_mode > 0)
-					last_playing_mode--;
-				else
-					last_playing_mode = 2;
-				//Update Display
+				IRcode = 0;
 
-			}else if(NEXT_BUT_STATE == eButtonSingleClick){
+				if(PlayCfg.Parameter.playing_mode > 1){
+					for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++){
+						Task_led_xl(i+1, 0x00);
+					}
+					PlayCfg.Parameter.playing_mode--;
+				}
+				else{
+					PlayCfg.Parameter.playing_mode = 2;
+					PlayCfg.Parameter.mode_signed = 1 - PlayCfg.Parameter.mode_signed;
+				}
+				//Update Display
+				Task_Led_StartPoint(12, PlayCfg.Parameter.playing_mode*2, 10 + PlayCfg.Parameter.mode_signed);
+				for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++){
+					Task_led_xl(i+1, 0x0F);
+				}
+				buzzer_stt = 1;
+			}else if((NEXT_BUT_STATE == eButtonSingleClick) || (IRcode == IR_NEXT_CODE)){
 				NEXT_BUT_STATE = eButtonHoldOff;
-				//Save flash
+				IRcode = 0;
 
-				cfg_state_t++;
-				pCfg_1st_state_Flag = 1;
-			}
-			break;
-		}
-		case E_CFG_START_MODE:
-		{
-			if(pCfg_1st_state_Flag){
-				pCfg_1st_state_Flag = 0;
-				//Read from FLASH
-				last_playing_mode = (int)LAST_MODE;
-				//Clear old display and blink
-
-				//Send Display and Blink Start point
-
-			}
-			//Check button
-			if(PLUS_BUT_STATE == eButtonSingleClick)
-			{
-				PLUS_BUT_STATE = eButtonHoldOff;
-
-				if(startup_time_s < 99)
-					startup_time_s++;
-				else
-					startup_time_s = 1;
-				//Update Display
-
-			}else if(MINUS_BUT_STATE == eButtonSingleClick){
-				MINUS_BUT_STATE = eButtonHoldOff;
-				if(startup_time_s > 0)
-					startup_time_s--;
-				else
-					startup_time_s = 99;
-				//Update Display
-
-			}else if(NEXT_BUT_STATE == eButtonSingleClick){
-				NEXT_BUT_STATE = eButtonHoldOff;
-				//Save flash
-
+				Task_Led_StartPoint(12, 12, 12);
+				for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++){
+					Task_led_xl(i+1, 0x00);
+				}
 				cfg_state_t = E_CFG_START_POINT;
 				pCfg_1st_state_Flag = 1;
+				buzzer_stt = 1;
 			}
 			break;
 		}
+//		case E_CFG_STARTUP_TIME:
+//		{
+//			if(pCfg_1st_state_Flag){
+//				pCfg_1st_state_Flag = 0;
+//				//Clear old display and blink
+//
+//				//Send Display and Blink Start point
+//
+//			}
+//			//Check button
+//			if(PLUS_BUT_STATE == eButtonSingleClick)
+//			{
+//				PLUS_BUT_STATE = eButtonHoldOff;
+//
+//				if(PlayCfg.Parameter.startup_time_m < 99)
+//					PlayCfg.Parameter.startup_time_m++;
+//				else
+//					PlayCfg.Parameter.startup_time_m = 1;
+//				//Update Display
+//
+//			}else if(MINUS_BUT_STATE == eButtonSingleClick){
+//				MINUS_BUT_STATE = eButtonHoldOff;
+//				if(PlayCfg.Parameter.startup_time_m > 0)
+//					PlayCfg.Parameter.startup_time_m--;
+//				else
+//					PlayCfg.Parameter.startup_time_m = 99;
+//				//Update Display
+//
+//			}else if(NEXT_BUT_STATE == eButtonSingleClick){
+//				NEXT_BUT_STATE = eButtonHoldOff;
+//				cfg_state_t = E_CFG_START_POINT;
+//				pCfg_1st_state_Flag = 1;
+//			}
+//			break;
+//		}
 	}
 }
 
-uint8_t Task_User_Init(uint8_t player_num)
+uint8_t Task_User_1stInit(uint8_t readFlash)
 {
-	if((player_num!=2) && (player_num!=4))
-		return 0;
 	//Read from FLASH
-	start_point = (int)BEGIN_POINT;
-	turn_time_s = (int)TURN_TIME_S;
-	rount_time_m = (int)ROUND_TIME_M;
+	if(readFlash)
+		Task_Read_Cfg();
 
-	current_player = 0;
+	if(PlayCfg.Parameter.playing_mode == 0){
+		return 0;
+	}
+	all_turn_cnt = 1;
 	hit_get_point_cnt = 0;
 
-	for(int i=0;i<MAX_PLAYER_NUM;i++)
+	for(int i=0;i<(int)MAX_PLAYER_NUM;i++)
 	{
+		Player[i].status = 0;
+	}
+	for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
+	{
+		Player[i].status = 1;
 		Player[i].ledxl_mask = 0x0F;
 		Player[i].addr = i+1;
 		Player[i].average = 0;
-		Player[i].point = start_point*((i>=player_num?0:1));
+		Player[i].point = PlayCfg.Parameter.start_point*((i>=(PlayCfg.Parameter.playing_mode*2)?0:1));
 		Player[i].max_hit_get_point = 0;
 		Player[i].sum_point = 0;
 		Player[i].sum_signed = 0;
+	}
+	return 1;
+}
+
+uint8_t Task_Round_Init(void)
+{
+	turn_time_s = PlayCfg.Parameter.turn_time_s;
+	rount_time_m = PlayCfg.Parameter.rount_time_m;
+
+	//all_turn_cnt = 1;
+	//hit_get_point_cnt = 0;
+
+	//Disable Lose Player
+	for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
+	{
+		if(Player[i].point == 0){
+			Player[i].status = 0;
+		}
+		Player[i].sum_point = 0;
+		Player[i].sum_signed = 0;
+		if(Player[i].addr == 1)
+			current_player = i;
 	}
 
 	//Send data to Display
@@ -302,54 +422,69 @@ uint8_t Task_User_Init(uint8_t player_num)
 	Led7HitCnt_Display(all_turn_cnt/10, all_turn_cnt%10, hit_get_point_cnt/10, hit_get_point_cnt%10);
 	Led7RoundTime_Display((rount_time_m/60)/10, (rount_time_m/60)%10, (rount_time_m%60)/10, (rount_time_m%60)%10);
 
-	Task_led_xl(0, 0x0F);
+	Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
+	for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
+	{
+		if(Player[i].status){
+			Task_led_xl(Player[i].addr, Player[i].ledxl_mask);
+			Task_Blink_Line(i+1, 0, 1);
+		}
+	}
 	Task_Upload_Display();
 
+	buzzer_stt = 1;
 	pTask_1st_Flag = 1;
 	return 1;
 }
 
-void Task_4_Player(void)
+uint8_t Task_Playing(void)
 {
-//	if(Task1_Flag == 0)
-//		return;
-//	Task1_Flag = 0;
-
 	if(pTask_1st_Flag)
 	{
-		point_plus = get_player_available() - 1;
+		//point_plus = get_player_available() - 1;
+		turn_time_s = PlayCfg.Parameter.turn_time_s;
 
 		last_average = Player[current_player].average;
 		Player[current_player].average = (last_average*(all_turn_cnt-1) + hit_get_point_cnt)/(float)all_turn_cnt;
 		if(Player[current_player].average>99.99)
 			Player[current_player].average = 99.99;
-		//Send data Display to all Addr
 
-		//Send Blink cmd to Current User
-		for(int i=0;i<MAX_PLAYER_NUM;i++)
+		Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8, 8);
+		for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
 		{
 			if(i==current_player)
-				Task_Blink_Line(current_player+1, 1, 1);
+				Task_Blink_Line(Player[current_player].addr, 1, 1);
 			else{
-				Task_Blink_Line(i+1, 0, 1);
+				Task_Blink_Line(Player[i].addr, 0, 1);
 			}
 		}
+		stop_time = 0;
 		pTask_1st_Flag = 0;
-		return;
+		return 0;
 	}
 
-	//Check Button
-	if(BUT_NEW_STA_FLAG == 0)
-		return;
-
-	BUT_NEW_STA_FLAG = 0;
-	if(PLUS_BUT_STATE == eButtonSingleClick)
+	//BUT_NEW_STA_FLAG = 0;
+	if((MODE_BUT_STATE == eButtonLongPressT1) && (PLUS_BUT_STATE == eButtonSingleClick))
 	{
 		PLUS_BUT_STATE = eButtonHoldOff;
-		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		MODE_BUT_STATE = eButtonHoldOff;
 
-		turn_time_s = (int)TURN_TIME_S;
+		Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask<<1)|0x01;
+		Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
+		buzzer_stt = 1;
+	}
+	else if((PLUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_PUSH_CODE))
+	{
+		PLUS_BUT_STATE = eButtonHoldOff;
+		IRcode = 0;
+		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		turn_time_s = PlayCfg.Parameter.turn_time_s;
+
 		hit_get_point_cnt++;
+		//Update CTCN
+		if(hit_get_point_cnt > Player[current_player].max_hit_get_point)
+			Player[current_player].max_hit_get_point = hit_get_point_cnt;
+
 		if((hit_get_point_cnt < 100) && (all_turn_cnt < 100)){
 			Led7HitCnt_Display(all_turn_cnt/10, all_turn_cnt%10, hit_get_point_cnt/10, hit_get_point_cnt%10);
 		}
@@ -358,161 +493,245 @@ void Task_4_Player(void)
 		if(Player[current_player].average>99.99)
 			Player[current_player].average = 99.99;
 
-		//Update CTCN
-		if(hit_get_point_cnt > Player[current_player].max_hit_get_point)
-			Player[current_player].max_hit_get_point = hit_get_point_cnt;
-
 		//Update  DHT & SDTL
-		for(int i=0;i<MAX_PLAYER_NUM;i++)
+		if(PlayCfg.Parameter.mode_signed)
 		{
-			if(Player[i].point == 0)
-				continue;
+			point_plus = get_player_available() - 1;
+			for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
+			{
+				if(Player[i].point == 0)
+					continue;
 
-			if(i==current_player){
-				Player[i].point += point_plus;
-				if(Player[i].sum_signed)
-				{
-					if(point_plus >= Player[i].sum_point){
-						Player[i].sum_point = point_plus - Player[i].sum_point;
-						Player[i].sum_signed = 0;
-					} else{
-						Player[i].sum_point -= point_plus;
-					}
-				}else{
-					Player[i].sum_point += point_plus;
-				}
-
-			}else{
-				Player[i].point -= 1;
-				if(Player[i].sum_signed){
-					Player[i].sum_point += 1;
-				}else{
-					if(Player[i].sum_point == 0){
-						Player[i].sum_point = 1;
-						Player[i].sum_signed = 1;
+				if(i==current_player){
+					Player[i].point += point_plus;
+					if(Player[i].sum_signed)
+					{
+						if(point_plus >= Player[i].sum_point){
+							Player[i].sum_point = point_plus - Player[i].sum_point;
+							Player[i].sum_signed = 0;
+						} else{
+							Player[i].sum_point -= point_plus;
+						}
 					}else{
-						Player[i].sum_point -= 1;
+						Player[i].sum_point += point_plus;
+					}
+
+				}else{
+					if(Player[i].point > 0)
+						Player[i].point -= 1;
+					else
+						Player[i].status = 0;
+
+					if(Player[i].sum_signed){
+						Player[i].sum_point += 1;
+					}else{
+						if(Player[i].sum_point == 0){
+							Player[i].sum_point = 1;
+							Player[i].sum_signed = 1;
+						}else{
+							Player[i].sum_point -= 1;
+						}
 					}
 				}
 			}
-		}
-		//Send Display
-		Task_Upload_Display();
-	}
-
-	if(MINUS_BUT_STATE == eButtonSingleClick)
-	{
-		MINUS_BUT_STATE = eButtonHoldOff;
-
-		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
-		turn_time_s = (int)TURN_TIME_S;
-
-		for(int i=0;i<MAX_PLAYER_NUM;i++)
-		{
-			if(Player[i].point == 0)
-				continue;
-
-			if(i==current_player){
-				Player[current_player].point -= point_plus;
-				if(Player[i].sum_signed){
-					Player[i].sum_point += point_plus;
+		}else{
+			Player[current_player].point += 1;
+			if(Player[current_player].sum_signed){
+				if(Player[current_player].sum_point == 1){
+					Player[current_player].sum_point = 0;
+					Player[current_player].sum_signed = 0;
 				}else{
-					if(point_plus > Player[i].sum_point){
-						Player[i].sum_point = point_plus - Player[i].sum_point;
-						Player[i].sum_signed = 1;
-					}else{
-						Player[i].sum_point -= point_plus;
-					}
+					Player[current_player].sum_point -= 1;
 				}
 			} else{
-				Player[i].point += 1;
-				if(Player[i].sum_signed){
-					if(Player[i].sum_point == 1){
-						Player[i].sum_point = 0;
-						Player[i].sum_signed = 0;
-					}else{
-						Player[i].sum_point -= 1;
-					}
-				} else{
-					Player[i].sum_point += 1;
-				}
+				Player[current_player].sum_point += 1;
 			}
 		}
 
 		//Send Display
 		Task_Upload_Display();
-		//Check all player Point to End task -> Next match
+		buzzer_stt = 1;
 	}
 
-	//Next round
-	if((MODE_BUT_STATE == eButtonLongPressT1) && (NEXT_BUT_STATE == eButtonSingleClick))
+	if((MODE_BUT_STATE == eButtonLongPressT1) && (MINUS_BUT_STATE == eButtonSingleClick))
+	{
+		MINUS_BUT_STATE = eButtonHoldOff;
+		MODE_BUT_STATE = eButtonHoldOff;
+
+		if(Player[current_player].ledxl_mask != 0)
+		{
+			Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask>>1)&0x0F;
+			Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
+			turn_time_s = PlayCfg.Parameter.turn_time_s;
+		}
+		buzzer_stt = 1;
+	}
+	else if((MINUS_BUT_STATE == eButtonSingleClick) || (IRcode == IR_MINUS_CODE))
+	{
+		MINUS_BUT_STATE = eButtonHoldOff;
+		IRcode = 0;
+		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		turn_time_s = PlayCfg.Parameter.turn_time_s;
+
+		if(PlayCfg.Parameter.mode_signed)
+		{
+			point_plus = get_player_available() - 1;
+			for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
+			{
+				if(Player[i].point == 0)
+					continue;
+
+				if(i==current_player){
+					if(Player[i].point >= point_plus)
+						Player[current_player].point -= point_plus;
+					else{
+						Player[current_player].point = 0;
+						Player[i].status = 0;
+					}
+
+					if(Player[i].sum_signed){
+						Player[i].sum_point += point_plus;
+					}else{
+						if(point_plus > Player[i].sum_point){
+							Player[i].sum_point = point_plus - Player[i].sum_point;
+							Player[i].sum_signed = 1;
+						}else{
+							Player[i].sum_point -= point_plus;
+						}
+					}
+				} else{
+					Player[i].point += 1;
+					if(Player[i].sum_signed){
+						if(Player[i].sum_point == 1){
+							Player[i].sum_point = 0;
+							Player[i].sum_signed = 0;
+						}else{
+							Player[i].sum_point -= 1;
+						}
+					} else{
+						Player[i].sum_point += 1;
+					}
+				}
+			}
+		} else{
+			if(Player[current_player].point > 0)
+				Player[current_player].point -= 1;
+			else
+				Player[current_player].status = 0;
+
+			if(Player[current_player].sum_signed){
+				Player[current_player].sum_point += 1;
+			}else{
+				if(Player[current_player].sum_point == 0){
+					Player[current_player].sum_point = 1;
+					Player[current_player].sum_signed = 1;
+				}else{
+					Player[current_player].sum_point -= 1;
+				}
+			}
+		}
+		//Send Display
+		Task_Upload_Display();
+		buzzer_stt = 1;
+	}
+
+	if((MODE_BUT_STATE == eButtonLongPressT1) && (NEXT_BUT_STATE == eButtonSingleClick) && (PlayCfg.Parameter.playing_mode == 2))
 	{
 		NEXT_BUT_STATE = eButtonHoldOff;
 		MODE_BUT_STATE = eButtonHoldOff;
 
 		current_player = 0;
 		hit_get_point_cnt = 0;
-		rount_time_m = (int)ROUND_TIME_M;
-		//while(!update_rand_addr());
-		for(int i=0;i<MAX_PLAYER_NUM;i++)
+		rount_time_m = PlayCfg.Parameter.rount_time_m;
+
+		for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
 		{
-			Player[i].ledxl_mask = 0x0F;
-			Player[i].addr = i+1;		//How to random???
-			Player[i].point = start_point;
-			Player[i].sum_point = 0;
-			Player[i].sum_signed = 0;
+			Task_Blink_Line(i+1, 0, 1);
 		}
-		Task_led_xl(0, 0x0F);
-		Task_Upload_Display();
-		pTask_1st_Flag = 1;
+
+		if(get_player_available() == 1)
+			return 0xFF;
+		//Random address, close player
+		update_rand_addr();
+		return 1;
 	}
-	else if(NEXT_BUT_STATE == eButtonSingleClick)
+	else if((NEXT_BUT_STATE == eButtonSingleClick) || (IRcode == IR_NEXT_CODE))
 	{
 		NEXT_BUT_STATE = eButtonHoldOff;
-		//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		IRcode = 0;
+
+		if(PlayCfg.Parameter.playing_mode == 1)
+		{
+			if((Player[0].point == 0) || (Player[1].point == 0))
+				return 0xFF;
+
+			if(Player[current_player].addr == 2)
+				all_turn_cnt++;
+			if(current_player)
+				current_player = 0;
+			else
+				current_player = 1;
+		}
+		else
+		{
+			uint8_t temp_play = get_next_user(current_player);
+			if(temp_play == 0xFF)
+				return temp_play;
+			else if(Player[temp_play].addr < Player[current_player].addr)
+				all_turn_cnt++;
+
+			current_player = temp_play;
+		}
 
 		hit_get_point_cnt = 0;
-		turn_time_s = (int)TURN_TIME_S;
-		for(int i=0;i<MAX_PLAYER_NUM;i++)
+		for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
 		{
 			Player[i].sum_point = 0;
 			Player[i].sum_signed = 0;
 		}
-
-		for(int i=0;i<MAX_PLAYER_NUM;i++)	//Change current player to next address
-		{
-			if(Player[current_player].addr == 4)
-			{
-				if(Player[i].addr == 1){
-					all_turn_cnt++;
-					current_player = i;
-					break;
-				}
-			}
-			else{
-				if(Player[i].addr == (Player[current_player].addr+1)){
-					current_player = i;
-					break;
-				}
-			}
-		}
-		if((hit_get_point_cnt < 100) && (all_turn_cnt < 100)){
+		if(all_turn_cnt < 100){
 			Led7HitCnt_Display(all_turn_cnt/10, all_turn_cnt%10, hit_get_point_cnt/10, hit_get_point_cnt%10);
 		}
 		Task_Upload_Display();
+		buzzer_stt = 1;
 		pTask_1st_Flag = 1;
+	}
+	return 0;
+}
+
+void Task_100ms(void)
+{
+	if(Task1_Flag == 0)
+			return;
+	Task1_Flag = 0;
+	if(buzzer_stt == 1){
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+		buzzer_stt = 0;
+	}
+	else if(buzzer_stt == 0){
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		buzzer_stt = 0xFF;
 	}
 }
 
-void Task_500ms(void)
+void Task_Playing_Time(void)
 {
 	if(Task2_Flag == 0)
 		return;
 	Task2_Flag = 0;
 
-	temp_s++;
+	if(IRcode == IR_STOP_CODE)
+	{
+		IRcode = 0;
+		if(stop_time)
+			stop_time = 0;
+		else
+			stop_time = 1;
+	}
+	if(stop_time == 0)
+		temp_s++;
 
-	if(temp_s>=120){
+	if(temp_s>=600){
 		temp_s = 0;
 
 		if(rount_time_m>0)
@@ -520,10 +739,9 @@ void Task_500ms(void)
 
 		Led7RoundTime_Display((rount_time_m/60)/10, (rount_time_m/60)%10, (rount_time_m%60)/10, (rount_time_m%60)%10);
 	}
-
 	if(turn_time_s > 0)
 	{
-		if((temp_s%2) == 0)
+		if((temp_s%10) == 0)
 		{
 			turn_time_s--;
 
@@ -532,15 +750,12 @@ void Task_500ms(void)
 			}
 			else if(turn_time_s>7){
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8, (turn_time_s%8));
-				//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+				buzzer_stt = 1;
 			}
 			else{
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, turn_time_s%8, 0);
-				//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+				buzzer_stt = 1;
 			}
-		}
-		else if(turn_time_s < 16){
-			//HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
 		}
 	}
 }
@@ -557,15 +772,36 @@ void Task_led_xl(uint8_t addr, uint8_t state)
 	printf("ADDR%d%d%c\n", addr, DATA_LEDXL_TYPE, (int)state+48);
 }
 
+void Task_Led_StartPoint(uint8_t tram, uint8_t chuc, uint8_t donvi)
+{
+	if(donvi == 12){
+		printf("ADDR5%dEEE\n", DATA_LED7_TYPE);
+	}
+	else if(donvi == 11){
+		printf("ADDR5%dE%dD\n", DATA_LED7_TYPE, chuc);
+	}
+	else if(donvi == 10){
+		printf("ADDR5%dE%dE\n", DATA_LED7_TYPE, chuc);
+	}
+	else{
+		printf("ADDR5%d%d%d%d\n", DATA_LED7_TYPE, (int)tram, (int)chuc, (int)donvi);
+	}
+	printf("ADDR52\n");
+}
+
 void Task_Blink_Line(uint8_t addr, uint8_t state, uint8_t line)
 {
 	printf("ADDR%d%d%d%d\n", (int)addr, (int)UPDATE_BLINK_STATE, (int)state, (int)line);
 }
 
+void Task_Buzzer_Enable(void)
+{
+	buzzer_stt = 1;
+}
 /* Private function -----------------------------------------------*/
 static void Task_Upload_Display(void)
 {
-	for(int i=0;i<MAX_PLAYER_NUM;i++)
+	for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
 	{
 		update_led7_data(i);
 	}
@@ -589,37 +825,101 @@ static void update_led7_data(uint8_t player_num)
 static uint8_t get_player_available(void)
 {
 	uint8_t player = 0;
-	for(int i=0;i<MAX_PLAYER_NUM;i++)
+	for(int i=0;i<(PlayCfg.Parameter.playing_mode*2);i++)
 	{
 		if(Player[i].point > 0){
 			player++;
+		}
+		else{
+			Player[i].status = 0;
 		}
 	}
 	return player;
 }
 
-//static uint8_t update_rand_addr(void)
-//{
-//	uint16_t rand_input = sys_millis;
-//	uint8_t temp_buff[4] = {Player[0].addr, Player[1].addr, Player[2].addr, Player[3].addr};
-//
-//	if(Player[0].addr == 4)
-//	{
-//		Player[0].addr = 1;
-//	}
-//	else{
-//		Player[0].addr +=1;
-//	}
-//
-//	Player[0].addr = temp_buff[1];
-//	Player[1].addr = rand_input%2==0?temp_buff[0]:temp_buff[3];
-//	if(Player[1].addr == temp_buff[3])
-//{
-//		Player[2].addr = temp_buff[0];
-//		Player[3].addr = temp_buff[2];
-//	}
-//
-//}
+static uint8_t get_next_user(uint8_t current_play)
+{
+	uint8_t temp_user_buff[4];
+	int i, j;
+	for(i=0;i<(int)MAX_PLAYER_NUM;i++)
+	{
+		for(j=0;j<(int)MAX_PLAYER_NUM;j++)
+		{
+			if(Player[j].addr == (i+1)){
+				temp_user_buff[i] = j;
+				break;
+			}
+		}
+	}
+	for(i=0;i<(int)MAX_PLAYER_NUM;i++){
+		if(temp_user_buff[i] == current_play)
+			break;
+	}
+
+	for(j=1;j<(int)MAX_PLAYER_NUM;j++){
+		if(Player[temp_user_buff[(i+j)%4]].point > 0)
+		 return temp_user_buff[(i+j)%4];
+	}
+	return 0xFF;
+}
+
+static void update_rand_addr(void)
+{
+	uint16_t rand_input = sys_millis;
+	uint8_t temp_user_buff[4];
+	uint8_t temp_addr_buff[4];
+	int i, j;
+	for(i=0;i<(int)MAX_PLAYER_NUM;i++)
+	{
+		for(j=0;j<(int)MAX_PLAYER_NUM;j++)
+		{
+			if(Player[j].addr == (i+1)){
+				temp_user_buff[i] = j;
+				temp_addr_buff[i] = Player[j].addr;
+				break;
+			}
+		}
+	}
+
+	Player[temp_user_buff[0]].addr = temp_addr_buff[1];
+	switch(rand_input%3)
+	{
+		case 0:
+		{
+			Player[temp_user_buff[1]].addr = temp_addr_buff[0];
+
+			Player[temp_user_buff[2]].addr = temp_addr_buff[3];
+			Player[temp_user_buff[3]].addr = temp_addr_buff[2];
+			break;
+		}
+		case 1:
+		{
+			Player[temp_user_buff[1]].addr = temp_addr_buff[2];
+			if(rand_input%2 == 1){
+				Player[temp_user_buff[2]].addr = temp_addr_buff[0];
+				Player[temp_user_buff[3]].addr = temp_addr_buff[3];
+			}
+			else{
+				Player[temp_user_buff[2]].addr = temp_addr_buff[3];
+				Player[temp_user_buff[3]].addr = temp_addr_buff[0];
+			}
+			break;
+		}
+		case 2:
+		{
+			Player[temp_user_buff[1]].addr = temp_addr_buff[3];
+			if(rand_input%2 == 0){
+				Player[temp_user_buff[2]].addr = temp_addr_buff[0];
+				Player[temp_user_buff[3]].addr = temp_addr_buff[2];
+			}
+			else{
+				Player[temp_user_buff[2]].addr = temp_addr_buff[2];
+				Player[temp_user_buff[3]].addr = temp_addr_buff[0];
+			}
+			break;
+		}
+	}
+}
 
 static void delay_ms(unsigned int x)
 {

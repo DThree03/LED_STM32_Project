@@ -73,6 +73,9 @@ void Error_Handler(void);
 #define CLK_2_GPIO_Port GPIOB
 #define DIO_2_Pin GPIO_PIN_15
 #define DIO_2_GPIO_Port GPIOB
+#define IR_SIGNAL_Pin GPIO_PIN_11
+#define IR_SIGNAL_GPIO_Port GPIOA
+#define IR_SIGNAL_EXTI_IRQn EXTI15_10_IRQn
 #define LED_Y_Pin GPIO_PIN_15
 #define LED_Y_GPIO_Port GPIOA
 #define LED_R_Pin GPIO_PIN_3

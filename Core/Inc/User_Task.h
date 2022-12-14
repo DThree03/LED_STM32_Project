@@ -12,18 +12,29 @@
 #include <stdint.h>
 
 /* Public function prototypes ------------------------------------------------*/
+void Task_Read_Cfg(void);
+
+void Task_Save_Cfg(void);
+
 void Task_Mode_Cfg(void);
 
-uint8_t Task_User_Init(uint8_t player_num);
+uint8_t Task_User_1stInit(uint8_t readFlash);
+
+uint8_t Task_Round_Init(void);
 
 void Task_Blink_Line(uint8_t addr, uint8_t state, uint8_t line);
 
-void Task_4_Player(void);
+uint8_t Task_Playing(void);
+
+void Task_Playing_Time(void);
+
+void Task_100ms(void);
 
 void Task_Clear_Display(uint8_t addr);
 
-void Task_500ms(void);
-
 void Task_led_xl(uint8_t addr, uint8_t state);
 
+void Task_Led_StartPoint(uint8_t tram, uint8_t chuc, uint8_t donvi);
+
+void Task_Buzzer_Enable(void);
 #endif /* INC_USER_TASK_H_ */

@@ -34,7 +34,8 @@ typedef enum{
 	E_STATE_STARTUP,
 	E_STATE_POWER_ON,
 	E_STATE_PLAYING,
-	E_STATE_CFG_MODE
+	E_STATE_CFG_MODE,
+	E_STATE_RUN_MODE
 }eUSER_TASK_STATE;
 /* USER CODE END PTD */
 
@@ -48,23 +49,24 @@ typedef enum{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
-UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 extern structIO_Button strIO_Button_Value;
 
 static eUSER_TASK_STATE eUserTask_State = E_STATE_STARTUP;
+static uint8_t Playing_Stt;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -113,11 +115,12 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
   MX_USART3_UART_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  //printf("Start up %02d!", (int)2);
+  HAL_TIM_Base_Start(&htim1);
+  __HAL_TIM_SET_COUNTER(&htim1, 0);
 
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
@@ -134,59 +137,29 @@ int main(void)
 		 case E_STATE_STARTUP:
 		 {
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-			 //Send data ON LXL
-			 Task_led_xl(0, 0x00);
-			 Task_Clear_Display(0);
 
 			 Led7TurnTime_Display(10, 10, 0, 0);
 			 Led7HitCnt_Display(10, 10, 10, 10);
 			 Led7RoundTime_Display(10, 10, 10, 10);
 
+			 Task_Led_StartPoint(12, 12, 12);
+			 Task_led_xl(0, 0x00);
+			 Task_Clear_Display(0);
+			 Task_Buzzer_Enable();
 			 while(1)
 			 {
+				 Task_100ms();
 				 if(BUT_NEW_STA_FLAG)
 				 {
 					 BUT_NEW_STA_FLAG = 0;
-
 					 if(POWER_BUT_STATE == eButtonLongPressT2)		//POWER ON
 					 {
 						POWER_BUT_STATE = eButtonHoldOff;
+
+						Task_User_1stInit(1);
+						Task_Buzzer_Enable();
 						eUserTask_State = E_STATE_POWER_ON;
 					 }
-
-//					 if(PLUS_BUT_STATE == eButtonSingleClick)
-//					 {
-//						 PLUS_BUT_STATE = eButtonHoldOff;
-//						 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-//
-//
-//						 if(i==16){
-//							 Led7TurnTime_Display(6, 0, 8, 8);
-//
-//						 }
-//						 else if(i>7){
-//							 Led7TurnTime_Display(6, 0, 8, (i%8));
-//						 }
-//						 else{
-//							 Led7TurnTime_Display(6, 0, i%8, 0);
-//						 }
-//
-//						 if(i==0)
-//							 i = 16;
-//						 else
-//							 i--;
-//
-//					 }
-//					 else if(MINUS_BUT_STATE == eButtonSingleClick)
-//					 {
-//						 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-//						 MINUS_BUT_STATE = eButtonHoldOff;
-//					 }
-//					 else if(MODE_BUT_STATE == eButtonSingleClick)
-//					 {
-//						 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
-//						 MODE_BUT_STATE = eButtonHoldOff;
-//					 }
 				 }
 				 if(eUserTask_State!=E_STATE_STARTUP){
 					 break;
@@ -197,25 +170,22 @@ int main(void)
 
 		 case E_STATE_POWER_ON:
 		 {
-			 Led7TurnTime_Display(10, 10, 0, 0);
-			 Led7HitCnt_Display(10, 10, 10, 10);
-			 Led7RoundTime_Display(10, 10, 10, 10);
 			 //Send data ON LXL
-			 Task_Clear_Display(0);
-			 Task_led_xl(0, 0x08);
-			 Task_Blink_Line(0, 0, 1);
+			 Task_Round_Init();
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
 			 while(1)
 			 {
+				 Task_100ms();
 				 if(BUT_NEW_STA_FLAG)
 				 {
 					 BUT_NEW_STA_FLAG = 0;
 					 if(POWER_BUT_STATE == eButtonSingleClick)			//START
 					 {
 						 POWER_BUT_STATE = eButtonHoldOff;
+						 Task_Buzzer_Enable();
 						 eUserTask_State = E_STATE_PLAYING;
 					 }
-					 else if(POWER_BUT_STATE == eButtonLongPressT2)		//POWER OFF
+					 else if(POWER_BUT_STATE == eButtonLongPressT1)		//POWER OFF
 					 {
 						 POWER_BUT_STATE = eButtonHoldOff;
 						 eUserTask_State = E_STATE_STARTUP;
@@ -223,6 +193,7 @@ int main(void)
 					 else if(MODE_BUT_STATE == eButtonSingleClick)		//MODE
 					 {
 						 MODE_BUT_STATE = eButtonHoldOff;
+						 Task_Buzzer_Enable();
 						 eUserTask_State = E_STATE_CFG_MODE;
 					 }
 				 }
@@ -236,35 +207,73 @@ int main(void)
 		 case E_STATE_PLAYING:
 		 {
 			 HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-			 Task_User_Init(4);
+
 			 while(1)
 			 {
-				Task_4_Player();
-				Task_500ms();
+				Playing_Stt = Task_Playing();
+				if(Playing_Stt == 0x01)	//Next Rout
+				{
+					eUserTask_State = E_STATE_POWER_ON;
+				}
+				else if(Playing_Stt == 0xFF)
+				{	//Winner -> Reset
+					Task_led_xl(0, 0x0F);
+				}
+				Task_Playing_Time();
+				Task_100ms();
+
 				if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick))
 				{
 					NEXT_BUT_STATE = eButtonHoldOff;
 					MODE_BUT_STATE = eButtonHoldOff;
 
+					Task_User_1stInit(0);
+					Task_Buzzer_Enable();
+					eUserTask_State = E_STATE_POWER_ON;
+				}
+				if(eUserTask_State!=E_STATE_PLAYING)
+					break;
+			 }
+			 break;
+		 }
+		 case E_STATE_RUN_MODE:
+		 {
+
+			 while(1){
+
+				if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick))
+				{
+					NEXT_BUT_STATE = eButtonHoldOff;
+					MODE_BUT_STATE = eButtonHoldOff;
 
 					eUserTask_State = E_STATE_POWER_ON;
 				}
-
-				if(eUserTask_State!=E_STATE_PLAYING)
+				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
 			 }
 			 break;
 		 }
 		 case E_STATE_CFG_MODE:
 		 {
+			 Task_Read_Cfg();
+			 Led7TurnTime_Display(10, 10, 0, 0);
+			 Led7HitCnt_Display(10, 10, 10, 10);
+			 Led7RoundTime_Display(10, 10, 10, 10);
+
+			 Task_Led_StartPoint(12, 12, 12);
+			 Task_led_xl(0, 0x00);
+			 Task_Clear_Display(0);
 			 while(1)
 			 {
 				 Task_Mode_Cfg();
+				 Task_100ms();
 				 if(MODE_BUT_STATE == eButtonSingleClick){
 				 //if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick)){
 					NEXT_BUT_STATE = eButtonHoldOff;
 					MODE_BUT_STATE = eButtonHoldOff;
-
+					Task_User_1stInit(0);
+					Task_Save_Cfg();
+					Task_Buzzer_Enable();
 					eUserTask_State = E_STATE_POWER_ON;
 				 }
 				 if(eUserTask_State!=E_STATE_CFG_MODE)
@@ -314,6 +323,52 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 7;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
   * @brief TIM2 Initialization Function
   * @param None
   * @retval None
@@ -355,39 +410,6 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
-}
-
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
 
 }
 
@@ -468,9 +490,20 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : IR_SIGNAL_Pin */
+  GPIO_InitStruct.Pin = IR_SIGNAL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(IR_SIGNAL_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
+
 //void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 //{
 //	vGetIOButtonValue(eButton1, HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin), &strOld_Button_Value, &strIO_Button_Value);

@@ -1,3 +1,4 @@
+"./Core/Src/FLASH_PAGE.o"
 "./Core/Src/IO_Button.o"
 "./Core/Src/TM1637_MAIN.o"
 "./Core/Src/User_Task.o"

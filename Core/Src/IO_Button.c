@@ -13,8 +13,8 @@
 #define ANTI_NOISE_PRESS		5	/* 2 cycle of Button Process 20ms */
 #define ANTI_NOISE_RELEASE		5	/* 2 cycle of Button Process 20ms */
 #define TIME_SINGLE_PRESS		20	/* 10 cycle of Button Process 100ms */
-#define TIME_LONG_PRESS_T1		100	/* 100 cycle of Button Process 1s */
-#define TIME_LONG_PRESS_T2 		300	/* 300 cycle of Button Process ~ 3000ms = 3s */
+#define TIME_LONG_PRESS_T1		90	/* 90 cycle of Button Process 900s */
+#define TIME_LONG_PRESS_T2 		250	/* 250 cycle of Button Process ~ 2500ms = 2.5s */
 #define TIME_HOLD_ON 			600	/* 600 cycle of Button Process ~ 6000ms = 6s */
 #define TIME_HOLD_OFF 			10	/* 10 cycle of Button Process ~ 100ms */
 #define TIME_HOLD_OFF_LONG_T1	100	/* 100 cycle of Button Process ~ 1s */
