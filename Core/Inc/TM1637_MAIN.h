@@ -34,6 +34,6 @@ void Led7TurnTime_Display(int led7ch, int led7dv, int led_num_left, int led_num_
 
 void Led7HitCnt_Display(int slc_ch, int slc_dv, int sct_ch, int sct_dv);
 
-void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv);
+void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv, uint8_t led);
 
 #endif /* INC_TM1637_MAIN_H_ */

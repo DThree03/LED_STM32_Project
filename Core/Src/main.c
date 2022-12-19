@@ -140,12 +140,14 @@ int main(void)
 
 			 Led7TurnTime_Display(10, 10, 0, 0);
 			 Led7HitCnt_Display(10, 10, 10, 10);
-			 Led7RoundTime_Display(10, 10, 10, 10);
+			 Led7RoundTime_Display(10, 10, 10, 10, 0);
 
 			 Task_Led_StartPoint(12, 12, 12);
 			 Task_led_xl(0, 0x00);
 			 Task_Clear_Display(0);
 			 Task_Buzzer_Enable();
+
+			 Task_User_1stInit(1);
 			 while(1)
 			 {
 				 Task_100ms();
@@ -156,9 +158,15 @@ int main(void)
 					 {
 						POWER_BUT_STATE = eButtonHoldOff;
 
-						Task_User_1stInit(1);
 						Task_Buzzer_Enable();
 						eUserTask_State = E_STATE_POWER_ON;
+					 }
+
+					 if(PLUS_BUT_STATE == eButtonLongPressT2)
+					 {
+						 PLUS_BUT_STATE = eButtonHoldOff;
+
+						 eUserTask_State = E_STATE_RUN_MODE;
 					 }
 				 }
 				 if(eUserTask_State!=E_STATE_STARTUP){
@@ -179,7 +187,7 @@ int main(void)
 				 if(BUT_NEW_STA_FLAG)
 				 {
 					 BUT_NEW_STA_FLAG = 0;
-					 if(POWER_BUT_STATE == eButtonSingleClick)			//START
+					 if(POWER_BUT_STATE == eButtonSingleClick)		//START
 					 {
 						 POWER_BUT_STATE = eButtonHoldOff;
 						 Task_Buzzer_Enable();
@@ -190,7 +198,7 @@ int main(void)
 						 POWER_BUT_STATE = eButtonHoldOff;
 						 eUserTask_State = E_STATE_STARTUP;
 					 }
-					 else if(MODE_BUT_STATE == eButtonSingleClick)		//MODE
+					 else if(MODE_BUT_STATE == eButtonSingleClick)
 					 {
 						 MODE_BUT_STATE = eButtonHoldOff;
 						 Task_Buzzer_Enable();
@@ -238,15 +246,17 @@ int main(void)
 		 }
 		 case E_STATE_RUN_MODE:
 		 {
-
-			 while(1){
-
-				if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick))
+			 Task_led_xl(0, 0x0F);
+			 Task_TestMode_Display(0);
+			 while(1)
+			 {
+				 Task_Run_TestMode();
+				 Task_100ms();
+				if(PLUS_BUT_STATE == eButtonLongPressT1)
 				{
-					NEXT_BUT_STATE = eButtonHoldOff;
-					MODE_BUT_STATE = eButtonHoldOff;
+					PLUS_BUT_STATE = eButtonHoldOff;
 
-					eUserTask_State = E_STATE_POWER_ON;
+					eUserTask_State = E_STATE_STARTUP;
 				}
 				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
@@ -258,7 +268,7 @@ int main(void)
 			 Task_Read_Cfg();
 			 Led7TurnTime_Display(10, 10, 0, 0);
 			 Led7HitCnt_Display(10, 10, 10, 10);
-			 Led7RoundTime_Display(10, 10, 10, 10);
+			 Led7RoundTime_Display(10, 10, 10, 10, 0);
 
 			 Task_Led_StartPoint(12, 12, 12);
 			 Task_led_xl(0, 0x00);
@@ -267,9 +277,8 @@ int main(void)
 			 {
 				 Task_Mode_Cfg();
 				 Task_100ms();
-				 if(MODE_BUT_STATE == eButtonSingleClick){
-				 //if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick)){
-					NEXT_BUT_STATE = eButtonHoldOff;
+				 if(MODE_BUT_STATE == eButtonSingleClick)
+				 {
 					MODE_BUT_STATE = eButtonHoldOff;
 					Task_User_1stInit(0);
 					Task_Save_Cfg();
