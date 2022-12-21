@@ -23,7 +23,6 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 
-#include "IO_Button.h"
 #include "User_Task.h"
 #include "TM1637_MAIN.h"
 /* USER CODE END Includes */
@@ -55,10 +54,10 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-extern structIO_Button strIO_Button_Value;
 
 static eUSER_TASK_STATE eUserTask_State = E_STATE_STARTUP;
 static uint8_t Playing_Stt;
+static uint16_t button_press_cnt = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,7 +101,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  vButtonIO_Init();
 
   /* USER CODE END Init */
 
@@ -150,25 +148,37 @@ int main(void)
 			 Task_User_1stInit(1);
 			 while(1)
 			 {
-				 Task_100ms();
-				 if(BUT_NEW_STA_FLAG)
-				 {
-					 BUT_NEW_STA_FLAG = 0;
-					 if(POWER_BUT_STATE == eButtonLongPressT2)		//POWER ON
-					 {
-						POWER_BUT_STATE = eButtonHoldOff;
-
-						Task_Buzzer_Enable();
-						eUserTask_State = E_STATE_POWER_ON;
-					 }
-
-					 if(PLUS_BUT_STATE == eButtonLongPressT2)
-					 {
-						 PLUS_BUT_STATE = eButtonHoldOff;
-
-						 eUserTask_State = E_STATE_RUN_MODE;
+				 if(POWER_BUT_VAL == GPIO_PIN_SET){
+					 delay_ms(20);
+					 if(POWER_BUT_VAL == GPIO_PIN_SET){
+						 while(POWER_BUT_VAL == GPIO_PIN_SET)
+						 {
+							 button_press_cnt++;
+							 if(button_press_cnt > 200){
+								 eUserTask_State = E_STATE_POWER_ON;
+								 break;
+							 }
+							 delay_ms(10);
+						 }
+						 button_press_cnt = 0;
 					 }
 				 }
+				 else if(PLUS_BUT_VAL == GPIO_PIN_SET){
+					 delay_ms(20);
+					 if(PLUS_BUT_VAL == GPIO_PIN_SET){
+						 while(PLUS_BUT_VAL == GPIO_PIN_SET)
+						 {
+							 button_press_cnt++;
+							 if(button_press_cnt > 200){
+								 eUserTask_State = E_STATE_RUN_MODE;
+								 break;
+							 }
+							 delay_ms(10);
+						 }
+						 button_press_cnt = 0;
+					 }
+				 }
+
 				 if(eUserTask_State!=E_STATE_STARTUP){
 					 break;
 				 }
@@ -183,26 +193,32 @@ int main(void)
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
 			 while(1)
 			 {
-				 Task_100ms();
-				 if(BUT_NEW_STA_FLAG)
-				 {
-					 BUT_NEW_STA_FLAG = 0;
-					 if(POWER_BUT_STATE == eButtonSingleClick)		//START
-					 {
-						 POWER_BUT_STATE = eButtonHoldOff;
-						 Task_Buzzer_Enable();
-						 eUserTask_State = E_STATE_PLAYING;
+				 if(POWER_BUT_VAL == GPIO_PIN_SET){
+					 delay_ms(20);
+					 if (POWER_BUT_VAL == GPIO_PIN_SET){
+						 while (POWER_BUT_VAL == GPIO_PIN_SET){
+							 button_press_cnt++;
+							 if (button_press_cnt > 200){
+								 break;
+							 }
+							 delay_ms(10);
+						 }
+						 if (button_press_cnt > 200){
+							 eUserTask_State = E_STATE_STARTUP;
+						 }
+						 else {
+							 Task_Buzzer_Enable();
+							 eUserTask_State = E_STATE_PLAYING;
+						 }
+						 button_press_cnt = 0;
 					 }
-					 else if(POWER_BUT_STATE == eButtonLongPressT1)		//POWER OFF
-					 {
-						 POWER_BUT_STATE = eButtonHoldOff;
-						 eUserTask_State = E_STATE_STARTUP;
-					 }
-					 else if(MODE_BUT_STATE == eButtonSingleClick)
-					 {
-						 MODE_BUT_STATE = eButtonHoldOff;
+				 }
+				 else if(MODE_BUT_VAL == GPIO_PIN_SET){
+					 delay_ms(50);
+					 if (MODE_BUT_VAL == GPIO_PIN_SET){
 						 Task_Buzzer_Enable();
 						 eUserTask_State = E_STATE_CFG_MODE;
+						 while (MODE_BUT_VAL == GPIO_PIN_SET);
 					 }
 				 }
 
@@ -219,26 +235,29 @@ int main(void)
 			 while(1)
 			 {
 				Playing_Stt = Task_Playing();
-				if(Playing_Stt == 0x01)	//Next Rout
-				{
+				if(Playing_Stt == 0x01)			//Next Rout
 					eUserTask_State = E_STATE_POWER_ON;
-				}
-				else if(Playing_Stt == 0xFF)
-				{	//Winner -> Reset
+				else if(Playing_Stt == 0xFF)	//Winner -> Reset
 					Task_led_xl(0, 0x0F);
-				}
-				Task_Playing_Time();
-				Task_100ms();
 
-				if((MODE_BUT_STATE == eButtonLongPressT1) && (POWER_BUT_STATE == eButtonSingleClick))
-				{
-					NEXT_BUT_STATE = eButtonHoldOff;
-					MODE_BUT_STATE = eButtonHoldOff;
-
-					Task_User_1stInit(0);
-					Task_Buzzer_Enable();
-					eUserTask_State = E_STATE_POWER_ON;
+				if(POWER_BUT_VAL == GPIO_PIN_SET){
+					delay_ms(20);
+					if (POWER_BUT_VAL == GPIO_PIN_SET){
+						while (POWER_BUT_VAL == GPIO_PIN_SET){
+							button_press_cnt++;
+							if(button_press_cnt > 200){
+								Task_User_1stInit(0);
+								//Task_Buzzer_Enable();
+								//eUserTask_State = E_STATE_POWER_ON;
+								eUserTask_State = E_STATE_STARTUP;
+								break;
+							}
+							delay_ms(10);
+						}
+						button_press_cnt = 0;
+					}
 				}
+
 				if(eUserTask_State!=E_STATE_PLAYING)
 					break;
 			 }
@@ -248,16 +267,11 @@ int main(void)
 		 {
 			 Task_led_xl(0, 0x0F);
 			 Task_TestMode_Display(0);
-			 while(1)
-			 {
-				 Task_Run_TestMode();
-				 Task_100ms();
-				if(PLUS_BUT_STATE == eButtonLongPressT1)
-				{
-					PLUS_BUT_STATE = eButtonHoldOff;
-
+			 while(1){
+				if(Task_Run_TestMode()){
 					eUserTask_State = E_STATE_STARTUP;
 				}
+
 				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
 			 }
@@ -276,14 +290,14 @@ int main(void)
 			 while(1)
 			 {
 				 Task_Mode_Cfg();
-				 Task_100ms();
-				 if(MODE_BUT_STATE == eButtonSingleClick)
-				 {
-					MODE_BUT_STATE = eButtonHoldOff;
-					Task_User_1stInit(0);
-					Task_Save_Cfg();
-					Task_Buzzer_Enable();
-					eUserTask_State = E_STATE_POWER_ON;
+				 if (MODE_BUT_VAL == GPIO_PIN_SET){
+					 delay_ms(20);
+					 if (MODE_BUT_VAL == GPIO_PIN_SET){
+						Task_User_1stInit(0);
+						Task_Save_Cfg();
+						eUserTask_State = E_STATE_POWER_ON;
+						while (MODE_BUT_VAL == GPIO_PIN_SET);
+					 }
 				 }
 				 if(eUserTask_State!=E_STATE_CFG_MODE)
 					break;
@@ -398,7 +412,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 79;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 999;
+  htim2.Init.Period = 9999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)

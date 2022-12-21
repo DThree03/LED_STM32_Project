@@ -11,6 +11,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 
+#define POWER_BUT_VAL		HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin)
+#define MODE_BUT_VAL		HAL_GPIO_ReadPin(BTN_2_GPIO_Port, BTN_2_Pin)
+#define MINUS_BUT_VAL		HAL_GPIO_ReadPin(BTN_3_GPIO_Port, BTN_3_Pin)
+#define NEXT_BUT_VAL		HAL_GPIO_ReadPin(BTN_4_GPIO_Port, BTN_4_Pin)
+#define PLUS_BUT_VAL		HAL_GPIO_ReadPin(BTN_5_GPIO_Port, BTN_5_Pin)
+
 /* Public function prototypes ------------------------------------------------*/
 void Task_Read_Cfg(void);
 
@@ -26,9 +32,7 @@ uint8_t Task_Playing(void);
 
 void Task_TestMode_Display(uint8_t global_num);
 
-void Task_Run_TestMode(void);
-
-void Task_Playing_Time(void);
+uint8_t Task_Run_TestMode(void);
 
 void Task_100ms(void);
 
@@ -41,5 +45,7 @@ void Task_Blink_Line(uint8_t addr, uint8_t state, uint8_t line);
 void Task_Led_StartPoint(uint8_t tram, uint8_t chuc, uint8_t donvi);
 
 void Task_Buzzer_Enable(void);
+
+void delay_ms(unsigned int x);
 
 #endif /* INC_USER_TASK_H_ */

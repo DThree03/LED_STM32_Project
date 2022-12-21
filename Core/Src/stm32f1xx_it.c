@@ -22,7 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "IO_Button.h"
+#include "User_Task.h"
 #include <string.h>
 #include <stdio.h>
 /* USER CODE END Includes */
@@ -65,8 +65,6 @@ extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
 extern TIM_HandleTypeDef htim1;
-extern structIO_Button strIO_Button_Value;
-extern structIO_Button strOld_Button_Value;
 
 extern volatile uint16_t sys_millis;
 extern volatile uint8_t bFlagDelay;
@@ -116,20 +114,8 @@ void SysTick_Handler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-	vGetIOButtonValue(eButton1, HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin), &strOld_Button_Value, &strIO_Button_Value);
-	vGetIOButtonValue(eButton2, HAL_GPIO_ReadPin(BTN_2_GPIO_Port, BTN_2_Pin), &strOld_Button_Value, &strIO_Button_Value);
-	vGetIOButtonValue(eButton3, HAL_GPIO_ReadPin(BTN_3_GPIO_Port, BTN_3_Pin), &strOld_Button_Value, &strIO_Button_Value);
-	vGetIOButtonValue(eButton4, HAL_GPIO_ReadPin(BTN_4_GPIO_Port, BTN_4_Pin), &strOld_Button_Value, &strIO_Button_Value);
-	vGetIOButtonValue(eButton5, HAL_GPIO_ReadPin(BTN_5_GPIO_Port, BTN_5_Pin), &strOld_Button_Value, &strIO_Button_Value);
-	if(memcmp(strOld_Button_Value.bButtonState, strIO_Button_Value.bButtonState, NUMBER_IO_BUTTON_USE))
-	{
-		memcpy(strOld_Button_Value.bButtonState, strIO_Button_Value.bButtonState, NUMBER_IO_BUTTON_USE);
-		strIO_Button_Value.bFlagNewButton = 1;
-	}
-	else{
-		strIO_Button_Value.bFlagNewButton = 0;
-	}
 
+	Task_100ms();
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -178,59 +164,12 @@ void EXTI15_10_IRQHandler(void)
 			IRcode = tempCode >> 8; // Second last 8 bits
 
 			 //Do your main work HERE
-			printf("IR Code 0x%x\n", (int)IRcode);
+			//printf("IR Code 0x%x\n", (int)IRcode);
 
 			tempCode = 0;
 			bitIndex = 0;
 		}
 	}
-//	if (__HAL_TIM_GET_COUNTER(&htim1) > 8000)
-//	{
-//		tempCode = 0;
-//		bitIndex = 0;
-//	}
-//	else if (__HAL_TIM_GET_COUNTER(&htim1) > 1700)
-//	{
-//		tempCode |= (1UL << (31-bitIndex));   // write 1
-//		bitIndex++;
-//	}
-//	else if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
-//	{
-//		tempCode &= ~(1UL << (31-bitIndex));  // write 0
-//		bitIndex++;
-//	}
-//
-//	if(bitIndex == 32)
-//	{
-//		cmdli = ~tempCode; // Logical inverted last 8 bits
-//		cmd = tempCode >> 8; // Second last 8 bits
-//		if(cmdli == cmd) // Check for errors
-//		{
-//			IRcode = tempCode; // If no bit errors
-			// Do your main work HERE
-
-//			switch (code)
-//			{
-//				case (16753245):
-//				SSD1306_Puts ("CH-", &Font_16x26, 1);
-//				break;
-//
-//				case (16736925):
-//				SSD1306_Puts ("CH", &Font_16x26, 1);
-//				break;
-//
-//				case (16769565):
-//				SSD1306_Puts ("CH+", &Font_16x26, 1);
-//				break;
-//
-//				default :
-//				break;
-//			}
-//		}
-//		bitIndex = 0;
-//	}
-//	bitIndex++;
-//	__HAL_TIM_SET_COUNTER(&htim1, 0);
 
   /* USER CODE END EXTI15_10_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(IR_SIGNAL_Pin);

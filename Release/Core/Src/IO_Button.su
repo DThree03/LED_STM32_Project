@@ -1,2 +1,2 @@
-../Core/Src/IO_Button.c:41:6:vButtonIO_Init	16	static
+../Core/Src/IO_Button.c:41:6:vButtonIO_Init	0	static
 ../Core/Src/IO_Button.c:51:6:vGetIOButtonValue	24	static
