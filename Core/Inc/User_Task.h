@@ -17,6 +17,9 @@
 #define NEXT_BUT_VAL		HAL_GPIO_ReadPin(BTN_4_GPIO_Port, BTN_4_Pin)
 #define PLUS_BUT_VAL		HAL_GPIO_ReadPin(BTN_5_GPIO_Port, BTN_5_Pin)
 
+#define BUTTON_ACTIVE		GPIO_PIN_SET
+#define BUTTON_DELAY		20
+
 /* Public function prototypes ------------------------------------------------*/
 void Task_Read_Cfg(void);
 

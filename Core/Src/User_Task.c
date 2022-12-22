@@ -60,16 +60,15 @@ typedef struct{
 #define DATA_LEDXL_TYPE     3
 #define UPDATE_BLINK_STATE  4
 
-#define IR_PUSH_CODE	0x908908
-#define IR_MINUS_CODE	0x904904
-#define IR_NEXT_CODE	0x910910
+#define IR_LEDXL_CODE	0x908908
+#define IR_NEXT_CODE	0x904904
+#define IR_PUSH_CODE	0x910910
 #define IR_STOP_CODE	0x920920
 /* USER CODE END PM */
 
 /* Public variables ---------------------------------------------------------*/
 
 static uint16_t button_cnt_t = 0;
-static uint8_t blink_flag_t = 0;
 
 volatile uint16_t sys_millis = 0;
 volatile uint8_t bFlagDelay = 0;
@@ -144,21 +143,21 @@ void Task_Mode_Cfg(void)
 				Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 			}
 
-			if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
-				delay_ms(20);
-				if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
+			if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
 					IRcode = 0;
 					if(PlayCfg.Parameter.start_point<99)
 						PlayCfg.Parameter.start_point++;
 					//Update Display
 					Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 					buzzer_stt = 1;
-					while(PLUS_BUT_VAL == GPIO_PIN_SET)
+					while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -167,21 +166,21 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
-				delay_ms(20);
-				if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
+			else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+				delay_ms((int)BUTTON_DELAY);
+				if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 					IRcode = 0;
 					if(PlayCfg.Parameter.start_point > 0)
 						PlayCfg.Parameter.start_point--;
 					//Update Display
 					Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 					buzzer_stt = 1;
-					while(MINUS_BUT_VAL == GPIO_PIN_SET)
+					while(MINUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -190,21 +189,21 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
-				delay_ms(20);
-				if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
+			else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
 					IRcode = 0;
 					cfg_state_t++;
 					pCfg_1st_state_Flag = 1;
 					//Clear old display and blink
 					Task_Led_StartPoint(12, 12, 12);
 					buzzer_stt = 1;
-					while(NEXT_BUT_VAL == GPIO_PIN_SET)
+					while(NEXT_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -227,9 +226,9 @@ void Task_Mode_Cfg(void)
 									  (PlayCfg.Parameter.rount_time_s%60)%10, 1);
 			}
 
-			if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
-				delay_ms(20);
-				if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
+			if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
 					IRcode = 0;
 					if(((PlayCfg.Parameter.rount_time_s+10)/60) < 99)
 						PlayCfg.Parameter.rount_time_s+=10;
@@ -239,12 +238,12 @@ void Task_Mode_Cfg(void)
 										  (PlayCfg.Parameter.rount_time_s%60)/10,
 										  (PlayCfg.Parameter.rount_time_s%60)%10, 1);
 					buzzer_stt = 1;
-					while(PLUS_BUT_VAL == GPIO_PIN_SET)
+					while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -253,9 +252,9 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
-				delay_ms(20);
-				if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
+			else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+				delay_ms((int)BUTTON_DELAY);
+				if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 					IRcode = 0;
 					if(PlayCfg.Parameter.rount_time_s >= 10)
 						PlayCfg.Parameter.rount_time_s-=10;
@@ -265,12 +264,12 @@ void Task_Mode_Cfg(void)
 										  (PlayCfg.Parameter.rount_time_s%60)/10,
 										  (PlayCfg.Parameter.rount_time_s%60)%10, 1);
 					buzzer_stt = 1;
-					while(MINUS_BUT_VAL == GPIO_PIN_SET)
+					while(MINUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -279,20 +278,20 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
-				delay_ms(20);
-				if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
+			else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
 					IRcode = 0;
 					cfg_state_t++;
 					pCfg_1st_state_Flag = 1;
 					Led7RoundTime_Display(10, 10, 10, 10, 0);
 					buzzer_stt = 1;
-					while(NEXT_BUT_VAL == GPIO_PIN_SET)
+					while(NEXT_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -311,9 +310,9 @@ void Task_Mode_Cfg(void)
 				Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
 			}
 
-			if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
-				delay_ms(20);
-				if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
+			if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
 					IRcode = 0;
 					if(PlayCfg.Parameter.turn_time_s < 99)
 						PlayCfg.Parameter.turn_time_s++;
@@ -322,12 +321,12 @@ void Task_Mode_Cfg(void)
 					//Update Display
 					Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
 					buzzer_stt = 1;
-					while(PLUS_BUT_VAL == GPIO_PIN_SET)
+					while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -336,9 +335,9 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
-				delay_ms(20);
-				if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
+			else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+				delay_ms((int)BUTTON_DELAY);
+				if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 					IRcode = 0;
 					if(PlayCfg.Parameter.turn_time_s > 0)
 						PlayCfg.Parameter.turn_time_s--;
@@ -347,12 +346,12 @@ void Task_Mode_Cfg(void)
 					//Update Display
 					Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 0, 0);
 					buzzer_stt = 1;
-					while(MINUS_BUT_VAL == GPIO_PIN_SET)
+					while(MINUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(PlayCfg.Parameter.turn_time_s/10, PlayCfg.Parameter.turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -361,20 +360,20 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
-				delay_ms(20);
-				if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
+			else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
 					IRcode = 0;
 					cfg_state_t++;
 					pCfg_1st_state_Flag = 1;
 					Led7TurnTime_Display(10, 10, 0, 0);
 					buzzer_stt = 1;
-					while(NEXT_BUT_VAL == GPIO_PIN_SET)
+					while(NEXT_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -398,9 +397,9 @@ void Task_Mode_Cfg(void)
 					Task_led_xl(i+1, 0x0F);
 				}
 			}
-			if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
-				delay_ms(20);
-				if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
+			if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
 					IRcode = 0;
 					PlayCfg.Parameter.playing_mode++;
 					if(PlayCfg.Parameter.playing_mode > (int)MAX_PLAYER_NUM)
@@ -417,12 +416,12 @@ void Task_Mode_Cfg(void)
 						Task_led_xl(i+1, 0x0F);
 					}
 					buzzer_stt = 1;
-					while(PLUS_BUT_VAL == GPIO_PIN_SET)
+					while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -431,9 +430,9 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
-				delay_ms(20);
-				if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
+			else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+				delay_ms((int)BUTTON_DELAY);
+				if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 					IRcode = 0;
 					if(PlayCfg.Parameter.playing_mode > 2){
 						for(int i=0;i<PlayCfg.Parameter.playing_mode;i++){
@@ -451,12 +450,12 @@ void Task_Mode_Cfg(void)
 						Task_led_xl(i+1, 0x0F);
 					}
 					buzzer_stt = 1;
-					while(MINUS_BUT_VAL == GPIO_PIN_SET)
+					while(MINUS_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(10, 10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(10, 10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -465,9 +464,9 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-			else if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
-				delay_ms(20);
-				if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
+			else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
+				delay_ms((int)BUTTON_DELAY);
+				if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
 					IRcode = 0;
 					Task_Led_StartPoint(12, 12, 12);
 					for(int i=0;i<PlayCfg.Parameter.playing_mode;i++){
@@ -476,12 +475,12 @@ void Task_Mode_Cfg(void)
 					cfg_state_t = E_CFG_START_POINT;
 					pCfg_1st_state_Flag = 1;
 					buzzer_stt = 1;
-					while(NEXT_BUT_VAL == GPIO_PIN_SET)
+					while(NEXT_BUT_VAL == BUTTON_ACTIVE)
 					{
 						button_cnt_t++;
 						if(button_cnt_t > 30){
-							blink_flag_t = 1 - blink_flag_t;
-							Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+							Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 						}
 						delay_ms(100);
 					}
@@ -492,41 +491,6 @@ void Task_Mode_Cfg(void)
 			}
 			break;
 		}
-//		case E_CFG_STARTUP_TIME:
-//		{
-//			if(pCfg_1st_state_Flag){
-//				pCfg_1st_state_Flag = 0;
-//				//Clear old display and blink
-//
-//				//Send Display and Blink Start point
-//
-//			}
-//			//Check button
-//			if(PLUS_BUT_STATE == eButtonSingleClick)
-//			{
-//				PLUS_BUT_STATE = eButtonHoldOff;
-//
-//				if(PlayCfg.Parameter.startup_time_m < 99)
-//					PlayCfg.Parameter.startup_time_m++;
-//				else
-//					PlayCfg.Parameter.startup_time_m = 1;
-//				//Update Display
-//
-//			}else if(MINUS_BUT_STATE == eButtonSingleClick){
-//				MINUS_BUT_STATE = eButtonHoldOff;
-//				if(PlayCfg.Parameter.startup_time_m > 0)
-//					PlayCfg.Parameter.startup_time_m--;
-//				else
-//					PlayCfg.Parameter.startup_time_m = 99;
-//				//Update Display
-//
-//			}else if(NEXT_BUT_STATE == eButtonSingleClick){
-//				NEXT_BUT_STATE = eButtonHoldOff;
-//				cfg_state_t = E_CFG_START_POINT;
-//				pCfg_1st_state_Flag = 1;
-//			}
-//			break;
-//		}
 	}
 }
 
@@ -541,33 +505,31 @@ uint8_t Task_User_1stInit(uint8_t readFlash)
 		//return 0;
 	}
 	stop_time = 1;
-	all_turn_cnt = 1;
-	hit_get_point_cnt = 0;
 
 	for(int i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{
-		Player[i].ledxl_mask = 0x0F;
 		Player[i].addr = i+1;
-		Player[i].average = 0;
-		Player[i].point = PlayCfg.Parameter.mode_signed*PlayCfg.Parameter.start_point*((i>=PlayCfg.Parameter.playing_mode?0:1));
-		Player[i].max_hit_get_point = 0;
-		Player[i].sum_point = 0;
-		Player[i].sum_signed = 0;
 	}
+
 	return 1;
 }
 
 uint8_t Task_Round_Init(void)
 {
+	//Time Update
+	stop_time = 1;
+	all_turn_cnt = 1;
+	hit_get_point_cnt = 0;
 	turn_time_s = PlayCfg.Parameter.turn_time_s;
-	rount_time_s = PlayCfg.Parameter.rount_time_s;
+	rount_time_s = PlayCfg.Parameter.rount_time_s * PlayCfg.Parameter.mode_signed;
 
-	//all_turn_cnt = 1;
-	//hit_get_point_cnt = 0;
-
-	//Disable Lose Player
+	//Player Data update
 	for(int i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{
+		Player[i].ledxl_mask = 0x0F;
+		Player[i].average = 0;
+		Player[i].point = PlayCfg.Parameter.mode_signed*PlayCfg.Parameter.start_point*((i>=PlayCfg.Parameter.playing_mode?0:1));
+		Player[i].max_hit_get_point = 0;
 		Player[i].sum_point = 0;
 		Player[i].sum_signed = 0;
 		if(Player[i].addr == 1)
@@ -579,12 +541,7 @@ uint8_t Task_Round_Init(void)
 	Led7HitCnt_Display(all_turn_cnt/10, all_turn_cnt%10, hit_get_point_cnt/10, hit_get_point_cnt%10);
 	Led7RoundTime_Display((rount_time_s/60)/10, (rount_time_s/60)%10, (rount_time_s%60)/10, (rount_time_s%60)%10, 1);
 
-	if(PlayCfg.Parameter.mode_signed)
-	{
-		Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
-	}else{
-		Task_Led_StartPoint(0, 0, 0);
-	}
+	Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 
 	for(int i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{
@@ -593,7 +550,6 @@ uint8_t Task_Round_Init(void)
 	}
 	Task_Upload_Display();
 
-	buzzer_stt = 1;
 	pTask_1st_Flag = 1;
 	return 1;
 }
@@ -624,9 +580,9 @@ uint8_t Task_Playing(void)
 		return 0;
 	}
 
-	if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
-		delay_ms(20);
-		if((PLUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_PUSH_CODE)){
+	if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
+		delay_ms((int)BUTTON_DELAY);
+		if((PLUS_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_PUSH_CODE)){
 			IRcode = 0;
 
 			turn_time_s = PlayCfg.Parameter.turn_time_s;
@@ -700,12 +656,12 @@ uint8_t Task_Playing(void)
 			Task_Upload_Display();
 			buzzer_stt = 1;
 
-			while(PLUS_BUT_VAL == GPIO_PIN_SET)
+			while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 			{
 				button_cnt_t++;
 				if(button_cnt_t > 30){
-					blink_flag_t = 1 - blink_flag_t;
-					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 				}
 				delay_ms(100);
 			}
@@ -714,9 +670,9 @@ uint8_t Task_Playing(void)
 			button_cnt_t = 0;
 		}
 	}
-	else if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
-		delay_ms(20);
-		if((MINUS_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_MINUS_CODE)){
+	else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+		delay_ms((int)BUTTON_DELAY);
+		if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 			IRcode = 0;
 
 			turn_time_s = PlayCfg.Parameter.turn_time_s;
@@ -776,12 +732,12 @@ uint8_t Task_Playing(void)
 			//Send Display
 			Task_Upload_Display();
 			buzzer_stt = 1;
-			while(MINUS_BUT_VAL == GPIO_PIN_SET)
+			while(MINUS_BUT_VAL == BUTTON_ACTIVE)
 			{
 				button_cnt_t++;
 				if(button_cnt_t > 30){
-					blink_flag_t = 1 - blink_flag_t;
-					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 				}
 				delay_ms(100);
 			}
@@ -790,9 +746,9 @@ uint8_t Task_Playing(void)
 			button_cnt_t = 0;
 		}
 	}
-	else if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
-		delay_ms(20);
-		if((NEXT_BUT_VAL == GPIO_PIN_SET) || (IRcode == IR_NEXT_CODE)){
+	else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
+		delay_ms((int)BUTTON_DELAY);
+		if((NEXT_BUT_VAL == BUTTON_ACTIVE) || (IRcode == IR_NEXT_CODE)){
 			IRcode = 0;
 
 			uint8_t temp_play = get_next_user(current_player);
@@ -815,12 +771,12 @@ uint8_t Task_Playing(void)
 			Task_Upload_Display();
 			buzzer_stt = 1;
 			pTask_1st_Flag = 1;
-			while(NEXT_BUT_VAL == GPIO_PIN_SET)
+			while(NEXT_BUT_VAL == BUTTON_ACTIVE)
 			{
 				button_cnt_t++;
 				if(button_cnt_t > 30){
-					blink_flag_t = 1 - blink_flag_t;
-					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
+
+					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 				}
 				delay_ms(100);
 			}
@@ -830,33 +786,31 @@ uint8_t Task_Playing(void)
 		}
 	}
 
-	if(MODE_BUT_VAL == GPIO_PIN_SET){
-		delay_ms(20);
-		if(MODE_BUT_VAL == GPIO_PIN_SET){
-
-			while(MODE_BUT_VAL == GPIO_PIN_SET)
+	if(MODE_BUT_VAL == BUTTON_ACTIVE){
+		delay_ms((int)BUTTON_DELAY);
+		if(MODE_BUT_VAL == BUTTON_ACTIVE){
+			while(MODE_BUT_VAL == BUTTON_ACTIVE)
 			{
 				button_cnt_t++;
-
 				if(button_cnt_t > 10){
-					blink_flag_t = 1 - blink_flag_t;
-					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*blink_flag_t, 8*blink_flag_t);
-					if(PLUS_BUT_VAL == GPIO_PIN_SET){
+
+					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
+					if(PLUS_BUT_VAL == BUTTON_ACTIVE){
 						Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask<<1)|0x01;
 						Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
 						buzzer_stt = 1;
-						while(PLUS_BUT_VAL == GPIO_PIN_SET);
+						while(PLUS_BUT_VAL == BUTTON_ACTIVE);
 					}
-					else if(MINUS_BUT_VAL == GPIO_PIN_SET){
+					else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 						if(Player[current_player].ledxl_mask != 0){
 							Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask>>1)&0x0F;
 							Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
 							turn_time_s = PlayCfg.Parameter.turn_time_s;
 						}
 						buzzer_stt = 1;
-						while(MINUS_BUT_VAL == GPIO_PIN_SET);
+						while(MINUS_BUT_VAL == BUTTON_ACTIVE);
 					}
-					else if(NEXT_BUT_VAL == GPIO_PIN_SET){
+					else if(NEXT_BUT_VAL == BUTTON_ACTIVE){
 						stop_time = 1;
 						current_player = 0;
 						hit_get_point_cnt = 0;
@@ -869,23 +823,31 @@ uint8_t Task_Playing(void)
 
 						if((PlayCfg.Parameter.mode_signed) && (PlayCfg.Parameter.playing_mode > 2)){
 							if(get_player_available() == 1){
-								delay_ms(100);
 								return 0xFF;
 							}
 							//Random address, close player
 							update_rand_addr();
 						}
-						while(NEXT_BUT_VAL == GPIO_PIN_SET);
-						delay_ms(100);
+						while(NEXT_BUT_VAL == BUTTON_ACTIVE);
 						return 1;
 					}
 				}
 				delay_ms(100);
 			}
-			if(button_cnt_t > 30)
+			if(button_cnt_t > 10)
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 0, 0);
 			button_cnt_t = 0;
 		}
+	}
+
+	if(IRcode == IR_LEDXL_CODE){
+		IRcode = 0;
+		if(Player[current_player].ledxl_mask != 0){
+			Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask>>1)&0x0F;
+			Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
+			turn_time_s = PlayCfg.Parameter.turn_time_s;
+		}
+		buzzer_stt = 1;
 	}
 	return 0;
 }
@@ -893,9 +855,15 @@ uint8_t Task_Playing(void)
 void Task_TestMode_Display(uint8_t global_num)
 {
 	buzzer_stt = 1;
+	static uint8_t lednum = 16;
 	Task_Led_StartPoint(global_num, global_num, global_num);
 
-	Led7TurnTime_Display(global_num, global_num, 8, 8);
+	//Led7TurnTime_Display(global_num, global_num, 8, 8);
+	if(lednum%16>7)
+		Led7TurnTime_Display(global_num/10, global_num%10, 8, (lednum%8));
+	else
+		Led7TurnTime_Display(global_num/10, global_num%10, lednum%8, 0);
+
 	Led7HitCnt_Display(global_num, global_num, global_num, global_num);
 	Led7RoundTime_Display(global_num, global_num, global_num, global_num, 1);
 
@@ -905,6 +873,10 @@ void Task_TestMode_Display(uint8_t global_num)
 			global_num, global_num, global_num, global_num, global_num, global_num);
 	printf("ADDR0%d\n", (int)UPDATE_LED7_TYPE);
 	delay_ms(200);
+
+	lednum--;
+	if(lednum == 0)
+		lednum = 16;
 }
 
 uint8_t Task_Run_TestMode(void)
@@ -912,18 +884,20 @@ uint8_t Task_Run_TestMode(void)
 	static uint8_t num = 0;
 	static uint8_t lxl_mask = 0x0F;
 
-	if(PLUS_BUT_VAL == GPIO_PIN_SET)
+	if(PLUS_BUT_VAL == BUTTON_ACTIVE)
 	{
-		delay_ms(20);
-		if(PLUS_BUT_VAL == GPIO_PIN_SET){
-			while(PLUS_BUT_VAL == GPIO_PIN_SET){
+		delay_ms((int)BUTTON_DELAY);
+		if(PLUS_BUT_VAL == BUTTON_ACTIVE){
+			while(PLUS_BUT_VAL == BUTTON_ACTIVE){
 				button_cnt_t++;
-				if(button_cnt_t > 200){
-					button_cnt_t = 0;
-					return 1;
-					break;
+				if(button_cnt_t > 20){
+					Led7TurnTime_Display(num/10, num%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 				}
-				delay_ms(10);
+				delay_ms(100);
+			}
+			if(button_cnt_t > 20){
+				button_cnt_t = 0;
+				return 1;
 			}
 			button_cnt_t = 0;
 
@@ -938,10 +912,10 @@ uint8_t Task_Run_TestMode(void)
 			Task_TestMode_Display(num);
 		}
 	}
-	else if ((MINUS_BUT_VAL == GPIO_PIN_SET) || (NEXT_BUT_VAL == GPIO_PIN_SET) || (MODE_BUT_VAL == GPIO_PIN_SET) || (POWER_BUT_VAL == GPIO_PIN_SET) || (IRcode != 0))
+	else if ((MINUS_BUT_VAL == BUTTON_ACTIVE) || (NEXT_BUT_VAL == BUTTON_ACTIVE) || (MODE_BUT_VAL == BUTTON_ACTIVE) || (POWER_BUT_VAL == BUTTON_ACTIVE) || (IRcode != 0))
 	{
-		delay_ms(20);
-		if((MINUS_BUT_VAL == GPIO_PIN_SET) || (NEXT_BUT_VAL == GPIO_PIN_SET) || (MODE_BUT_VAL == GPIO_PIN_SET) || (POWER_BUT_VAL == GPIO_PIN_SET) || (IRcode != 0))
+		delay_ms((int)BUTTON_DELAY);
+		if((MINUS_BUT_VAL == BUTTON_ACTIVE) || (NEXT_BUT_VAL == BUTTON_ACTIVE) || (MODE_BUT_VAL == BUTTON_ACTIVE) || (POWER_BUT_VAL == BUTTON_ACTIVE) || (IRcode != 0))
 		{
 			IRcode = 0;
 
@@ -954,7 +928,14 @@ uint8_t Task_Run_TestMode(void)
 			if(num > 9)
 				num = 0;
 			Task_TestMode_Display(num);
-			while((POWER_BUT_VAL == GPIO_PIN_SET) || (MINUS_BUT_VAL == GPIO_PIN_SET) || (NEXT_BUT_VAL == GPIO_PIN_SET) || (MODE_BUT_VAL == GPIO_PIN_SET) || (PLUS_BUT_VAL == GPIO_PIN_SET));
+			while((POWER_BUT_VAL == BUTTON_ACTIVE) || (MINUS_BUT_VAL == BUTTON_ACTIVE) || (NEXT_BUT_VAL == BUTTON_ACTIVE) || (MODE_BUT_VAL == BUTTON_ACTIVE) || (PLUS_BUT_VAL == BUTTON_ACTIVE))
+			{
+				button_cnt_t++;
+				if(button_cnt_t > 20){
+					Led7TurnTime_Display(num/10, num%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
+				}
+				delay_ms(100);
+			}
 		}
 	}
 	return 0;
@@ -968,34 +949,46 @@ void Task_100ms(void)
 		buzzer_stt = 1;
 		if(stop_time)
 			stop_time = 0;
-		else
+		else{
+			temp_s = 0;
 			stop_time = 1;
+		}
 	}
-
-	if(buzzer_stt == 1){
+	if((buzzer_stt > 0) && (buzzer_stt != 0xFF)){
 		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
-		buzzer_stt = 0;
+		buzzer_stt--;
 	}
 	else if(buzzer_stt == 0){
 		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
 		buzzer_stt = 0xFF;
 	}
 
+	if(stop_time)
+		return;
+
 	temp_s++;
 	if(temp_s>=600)
 		temp_s = 0;
 
-	if(((temp_s%10) == 0) && (stop_time == 0))
-	{
-		if(rount_time_s>0){
-			rount_time_s--;
-			Led7RoundTime_Display((rount_time_s/60)/10, (rount_time_s/60)%10, (rount_time_s%60)/10, (rount_time_s%60)%10, 1);
+	if((temp_s%10) == 0){
+		if(PlayCfg.Parameter.mode_signed){
+			if (rount_time_s>0){
+				rount_time_s--;
+				Led7RoundTime_Display((rount_time_s/60)/10, (rount_time_s/60)%10, (rount_time_s%60)/10, (rount_time_s%60)%10, 1);
+				if(rount_time_s == 0){
+					buzzer_stt = 15;
+				}
+			}
+		}
+		else{
+			if(rount_time_s/60 <= 99){
+				rount_time_s++;
+				Led7RoundTime_Display((rount_time_s/60)/10, (rount_time_s/60)%10, (rount_time_s%60)/10, (rount_time_s%60)%10, 1);
+			}
 		}
 
-		if(turn_time_s > 0)
-		{
+		if(turn_time_s > 0){
 			turn_time_s--;
-
 			if(turn_time_s>=16){
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8, 8);
 			}
@@ -1008,6 +1001,10 @@ void Task_100ms(void)
 				buzzer_stt = 1;
 			}
 		}
+	}
+	if(((temp_s%5) == 0) && ((temp_s%10) != 0) && (temp_s != 0))
+	{
+		Led7RoundTime_Display((rount_time_s/60)/10, (rount_time_s/60)%10, (rount_time_s%60)/10, (rount_time_s%60)%10, 0);
 	}
 }
 
@@ -1057,7 +1054,7 @@ static void Task_Upload_Display(void)
 		update_led7_data(i);
 	}
 	printf("ADDR0%d\n", (int)UPDATE_LED7_TYPE);
-	delay_ms(200);
+	delay_ms(300);
 }
 
 static void update_led7_data(uint8_t player_num)

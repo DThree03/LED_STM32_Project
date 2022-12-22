@@ -149,7 +149,7 @@ void EXTI15_10_IRQHandler(void)
 	}
 	else
 	{
-		if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
+		if (__HAL_TIM_GET_COUNTER(&htim1) > 700)
 		{
 			tempCode |= (1UL << (31-bitIndex));   // write 1
 		}
@@ -162,7 +162,6 @@ void EXTI15_10_IRQHandler(void)
 		if(bitIndex == 24)
 		{
 			IRcode = tempCode >> 8; // Second last 8 bits
-
 			 //Do your main work HERE
 			//printf("IR Code 0x%x\n", (int)IRcode);
 

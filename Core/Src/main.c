@@ -121,10 +121,12 @@ int main(void)
   __HAL_TIM_SET_COUNTER(&htim1, 0);
 
   HAL_TIM_Base_Start_IT(&htim2);
+  //HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  Task_User_1stInit(1);
   while (1)
   {
     /* USER CODE END WHILE */
@@ -140,44 +142,91 @@ int main(void)
 			 Led7HitCnt_Display(10, 10, 10, 10);
 			 Led7RoundTime_Display(10, 10, 10, 10, 0);
 
+			 Task_Blink_Line(0, 0, 1);
 			 Task_Led_StartPoint(12, 12, 12);
 			 Task_led_xl(0, 0x00);
 			 Task_Clear_Display(0);
 			 Task_Buzzer_Enable();
 
-			 Task_User_1stInit(1);
 			 while(1)
 			 {
-				 if(POWER_BUT_VAL == GPIO_PIN_SET){
-					 delay_ms(20);
-					 if(POWER_BUT_VAL == GPIO_PIN_SET){
-						 while(POWER_BUT_VAL == GPIO_PIN_SET)
+				 if(POWER_BUT_VAL == BUTTON_ACTIVE){
+					 delay_ms(BUTTON_DELAY);
+					 if(POWER_BUT_VAL == BUTTON_ACTIVE){
+						 while(POWER_BUT_VAL == BUTTON_ACTIVE)
 						 {
 							 button_press_cnt++;
-							 if(button_press_cnt > 200){
-								 eUserTask_State = E_STATE_POWER_ON;
-								 break;
+							 if(button_press_cnt > 20){
+								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
 							 }
-							 delay_ms(10);
+							 delay_ms(100);
+						 }
+						 if(button_press_cnt > 20){
+							 Task_Buzzer_Enable();
+							 eUserTask_State = E_STATE_POWER_ON;
 						 }
 						 button_press_cnt = 0;
 					 }
 				 }
-				 else if(PLUS_BUT_VAL == GPIO_PIN_SET){
-					 delay_ms(20);
-					 if(PLUS_BUT_VAL == GPIO_PIN_SET){
-						 while(PLUS_BUT_VAL == GPIO_PIN_SET)
+				 else if(PLUS_BUT_VAL == BUTTON_ACTIVE){
+					 delay_ms((int)BUTTON_DELAY);
+					 if(PLUS_BUT_VAL ==BUTTON_ACTIVE){
+						 while(PLUS_BUT_VAL == BUTTON_ACTIVE)
 						 {
 							 button_press_cnt++;
-							 if(button_press_cnt > 200){
-								 eUserTask_State = E_STATE_RUN_MODE;
-								 break;
+							 if(button_press_cnt > 20){
+								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
 							 }
-							 delay_ms(10);
+							 delay_ms(100);
+						 }
+						 if(button_press_cnt > 20){
+							 eUserTask_State = E_STATE_RUN_MODE;
 						 }
 						 button_press_cnt = 0;
 					 }
 				 }
+//				 else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+//					 delay_ms(20);
+//					 if(MINUS_BUT_VAL == BUTTON_ACTIVE){
+//						 while(MINUS_BUT_VAL == BUTTON_ACTIVE)
+//						 {
+//							 button_press_cnt++;
+//							 if(button_press_cnt > 30){
+//								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
+//							 }
+//							 delay_ms(100);
+//						 }
+//						 button_press_cnt = 0;
+//					 }
+//				 }
+//				 else if(NEXT_BUT_VAL == BUTTON_ACTIVE){
+//					 delay_ms(20);
+//					 if(NEXT_BUT_VAL == BUTTON_ACTIVE){
+//						 while(NEXT_BUT_VAL == BUTTON_ACTIVE)
+//						 {
+//							 button_press_cnt++;
+//							 if(button_press_cnt > 30){
+//								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
+//							 }
+//							 delay_ms(100);
+//						 }
+//						 button_press_cnt = 0;
+//					 }
+//				 }
+//				 else if(MODE_BUT_VAL == BUTTON_ACTIVE){
+//					 delay_ms(20);
+//					 if(MODE_BUT_VAL == BUTTON_ACTIVE){x
+//						 while(MODE_BUT_VAL == BUTTON_ACTIVE)
+//						 {
+//							 button_press_cnt++;
+//							 if(button_press_cnt > 30){
+//								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
+//							 }
+//							 delay_ms(100);
+//						 }
+//						 button_press_cnt = 0;
+//					 }
+//				 }
 
 				 if(eUserTask_State!=E_STATE_STARTUP){
 					 break;
@@ -193,17 +242,17 @@ int main(void)
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
 			 while(1)
 			 {
-				 if(POWER_BUT_VAL == GPIO_PIN_SET){
-					 delay_ms(20);
-					 if (POWER_BUT_VAL == GPIO_PIN_SET){
-						 while (POWER_BUT_VAL == GPIO_PIN_SET){
+				 if(POWER_BUT_VAL == BUTTON_ACTIVE){
+					 delay_ms((int)BUTTON_DELAY);
+					 if (POWER_BUT_VAL == BUTTON_ACTIVE){
+						 while (POWER_BUT_VAL == BUTTON_ACTIVE){
 							 button_press_cnt++;
-							 if (button_press_cnt > 200){
-								 break;
+							 if(button_press_cnt > 20){
+								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
 							 }
-							 delay_ms(10);
+							 delay_ms(100);
 						 }
-						 if (button_press_cnt > 200){
+						 if (button_press_cnt > 20){
 							 eUserTask_State = E_STATE_STARTUP;
 						 }
 						 else {
@@ -213,12 +262,22 @@ int main(void)
 						 button_press_cnt = 0;
 					 }
 				 }
-				 else if(MODE_BUT_VAL == GPIO_PIN_SET){
+				 else if(MODE_BUT_VAL == BUTTON_ACTIVE){
 					 delay_ms(50);
-					 if (MODE_BUT_VAL == GPIO_PIN_SET){
-						 Task_Buzzer_Enable();
-						 eUserTask_State = E_STATE_CFG_MODE;
-						 while (MODE_BUT_VAL == GPIO_PIN_SET);
+					 if (MODE_BUT_VAL == BUTTON_ACTIVE){
+						 while(MODE_BUT_VAL == BUTTON_ACTIVE)
+						 {
+							 button_press_cnt++;
+							 if(button_press_cnt > 20){
+								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
+							 }
+							 delay_ms(100);
+						 }
+						 if(button_press_cnt > 20){
+							 Task_Buzzer_Enable();
+							 eUserTask_State = E_STATE_CFG_MODE;
+						 }
+						 button_press_cnt = 0;
 					 }
 				 }
 
@@ -240,19 +299,19 @@ int main(void)
 				else if(Playing_Stt == 0xFF)	//Winner -> Reset
 					Task_led_xl(0, 0x0F);
 
-				if(POWER_BUT_VAL == GPIO_PIN_SET){
-					delay_ms(20);
-					if (POWER_BUT_VAL == GPIO_PIN_SET){
-						while (POWER_BUT_VAL == GPIO_PIN_SET){
+				if(POWER_BUT_VAL == BUTTON_ACTIVE){
+					delay_ms((int)BUTTON_DELAY);
+					if (POWER_BUT_VAL == BUTTON_ACTIVE){
+						while (POWER_BUT_VAL == BUTTON_ACTIVE){
 							button_press_cnt++;
-							if(button_press_cnt > 200){
-								Task_User_1stInit(0);
-								//Task_Buzzer_Enable();
-								//eUserTask_State = E_STATE_POWER_ON;
-								eUserTask_State = E_STATE_STARTUP;
-								break;
+							if(button_press_cnt > 20){
+								Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
 							}
-							delay_ms(10);
+							delay_ms(100);
+						}
+						if(button_press_cnt > 20){
+							Task_User_1stInit(0);
+							eUserTask_State = E_STATE_STARTUP;
 						}
 						button_press_cnt = 0;
 					}
@@ -271,7 +330,6 @@ int main(void)
 				if(Task_Run_TestMode()){
 					eUserTask_State = E_STATE_STARTUP;
 				}
-
 				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
 			 }
@@ -290,13 +348,24 @@ int main(void)
 			 while(1)
 			 {
 				 Task_Mode_Cfg();
-				 if (MODE_BUT_VAL == GPIO_PIN_SET){
-					 delay_ms(20);
-					 if (MODE_BUT_VAL == GPIO_PIN_SET){
-						Task_User_1stInit(0);
-						Task_Save_Cfg();
-						eUserTask_State = E_STATE_POWER_ON;
-						while (MODE_BUT_VAL == GPIO_PIN_SET);
+				 if(MODE_BUT_VAL == BUTTON_ACTIVE){
+					 delay_ms(50);
+					 if (MODE_BUT_VAL == BUTTON_ACTIVE){
+						 while(MODE_BUT_VAL == BUTTON_ACTIVE)
+						 {
+							 button_press_cnt++;
+							 if(button_press_cnt > 20){
+								 Led7TurnTime_Display(10, 10, 8*(button_press_cnt%2), 8*(button_press_cnt%2));
+							 }
+							 delay_ms(100);
+						 }
+						 if(button_press_cnt > 20){
+							 Task_Buzzer_Enable();
+							 Task_User_1stInit(0);
+							Task_Save_Cfg();
+							eUserTask_State = E_STATE_POWER_ON;
+						 }
+						 button_press_cnt = 0;
 					 }
 				 }
 				 if(eUserTask_State!=E_STATE_CFG_MODE)
