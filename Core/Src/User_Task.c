@@ -67,18 +67,19 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Public variables ---------------------------------------------------------*/
-
-static uint16_t button_cnt_t = 0;
-
 volatile uint16_t sys_millis = 0;
 volatile uint8_t bFlagDelay = 0;
 volatile uint32_t uCountDelay = 0;
 
 volatile uint8_t Task1_Flag = 0;
 volatile uint8_t Task2_Flag = 0;
+//volatile uint8_t task100ms_flag = 0;
+//volatile uint8_t buzzer_stt = 0xFF;
 
 volatile uint32_t IRcode = 0;
 /* Private variables ---------------------------------------------------------*/
+static uint8_t buzzer_stt = 0xFF;
+static uint16_t button_cnt_t = 0;
 static uint8_t pTask_1st_Flag;
 static uint8_t pCfg_1st_state_Flag = 1;
 /*	Read from FLASH	 */
@@ -98,7 +99,7 @@ static uint8_t point_plus;
 
 static uint16_t temp_s = 0;
 static uint8_t stop_time;
-static uint8_t buzzer_stt = 0xFF;
+//static uint8_t buzzer_stt = 0xFF;
 /* Private function prototypes -----------------------------------------------*/
 static void Task_Upload_Display(void);
 static void update_led7_data(uint8_t player_num);
@@ -792,14 +793,13 @@ uint8_t Task_Playing(void)
 			while(MODE_BUT_VAL == BUTTON_ACTIVE)
 			{
 				button_cnt_t++;
-				if(button_cnt_t > 10){
-
+				if(button_cnt_t > 20){
 					Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8*(button_cnt_t%2), 8*(button_cnt_t%2));
 					if(PLUS_BUT_VAL == BUTTON_ACTIVE){
 						Player[current_player].ledxl_mask = (Player[current_player].ledxl_mask<<1)|0x01;
 						Task_led_xl(Player[current_player].addr, Player[current_player].ledxl_mask);
 						buzzer_stt = 1;
-						while(PLUS_BUT_VAL == BUTTON_ACTIVE);
+						//while(PLUS_BUT_VAL == BUTTON_ACTIVE);
 					}
 					else if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 						if(Player[current_player].ledxl_mask != 0){
@@ -808,7 +808,7 @@ uint8_t Task_Playing(void)
 							turn_time_s = PlayCfg.Parameter.turn_time_s;
 						}
 						buzzer_stt = 1;
-						while(MINUS_BUT_VAL == BUTTON_ACTIVE);
+						//while(MINUS_BUT_VAL == BUTTON_ACTIVE);
 					}
 					else if(NEXT_BUT_VAL == BUTTON_ACTIVE){
 						stop_time = 1;
@@ -820,21 +820,21 @@ uint8_t Task_Playing(void)
 						{
 							Task_Blink_Line(i+1, 0, 1);
 						}
-
-						if((PlayCfg.Parameter.mode_signed) && (PlayCfg.Parameter.playing_mode > 2)){
+						buzzer_stt = 1;
+						if((PlayCfg.Parameter.mode_signed) && (PlayCfg.Parameter.playing_mode > 3)){
 							if(get_player_available() == 1){
 								return 0xFF;
 							}
 							//Random address, close player
 							update_rand_addr();
 						}
-						while(NEXT_BUT_VAL == BUTTON_ACTIVE);
+						//while(NEXT_BUT_VAL == BUTTON_ACTIVE);
 						return 1;
 					}
 				}
 				delay_ms(100);
 			}
-			if(button_cnt_t > 10)
+			if(button_cnt_t > 20)
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 0, 0);
 			button_cnt_t = 0;
 		}
@@ -943,6 +943,9 @@ uint8_t Task_Run_TestMode(void)
 
 void Task_100ms(void)
 {
+//	if(task100ms_flag == 0)
+//		return;
+//	task100ms_flag = 0;
 	if(IRcode == IR_STOP_CODE)
 	{
 		IRcode = 0;

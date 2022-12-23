@@ -150,6 +150,7 @@ int main(void)
 
 			 while(1)
 			 {
+				 //Task_100ms();
 				 if(POWER_BUT_VAL == BUTTON_ACTIVE){
 					 delay_ms(BUTTON_DELAY);
 					 if(POWER_BUT_VAL == BUTTON_ACTIVE){
@@ -242,6 +243,7 @@ int main(void)
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
 			 while(1)
 			 {
+				 //Task_100ms();
 				 if(POWER_BUT_VAL == BUTTON_ACTIVE){
 					 delay_ms((int)BUTTON_DELAY);
 					 if (POWER_BUT_VAL == BUTTON_ACTIVE){
@@ -263,7 +265,7 @@ int main(void)
 					 }
 				 }
 				 else if(MODE_BUT_VAL == BUTTON_ACTIVE){
-					 delay_ms(50);
+					 delay_ms((int)BUTTON_DELAY);
 					 if (MODE_BUT_VAL == BUTTON_ACTIVE){
 						 while(MODE_BUT_VAL == BUTTON_ACTIVE)
 						 {
@@ -299,6 +301,7 @@ int main(void)
 				else if(Playing_Stt == 0xFF)	//Winner -> Reset
 					Task_led_xl(0, 0x0F);
 
+				//Task_100ms();
 				if(POWER_BUT_VAL == BUTTON_ACTIVE){
 					delay_ms((int)BUTTON_DELAY);
 					if (POWER_BUT_VAL == BUTTON_ACTIVE){
@@ -330,6 +333,7 @@ int main(void)
 				if(Task_Run_TestMode()){
 					eUserTask_State = E_STATE_STARTUP;
 				}
+				//Task_100ms();
 				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
 			 }
@@ -348,6 +352,7 @@ int main(void)
 			 while(1)
 			 {
 				 Task_Mode_Cfg();
+				 //Task_100ms();
 				 if(MODE_BUT_VAL == BUTTON_ACTIVE){
 					 delay_ms(50);
 					 if (MODE_BUT_VAL == BUTTON_ACTIVE){

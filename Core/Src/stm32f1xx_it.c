@@ -72,6 +72,8 @@ extern volatile uint32_t uCountDelay;
 
 extern volatile uint8_t Task1_Flag;
 extern volatile uint8_t Task2_Flag;
+//extern volatile uint8_t task100ms_flag;
+//extern volatile uint8_t buzzer_stt;
 
 extern volatile uint32_t IRcode;
 /* USER CODE END EV */
@@ -114,8 +116,16 @@ void SysTick_Handler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
 	Task_100ms();
+//	task100ms_flag = 1;
+//	if((buzzer_stt > 0) && (buzzer_stt != 0xFF)){
+//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+//		buzzer_stt--;
+//	}
+//	else if(buzzer_stt == 0){
+//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+//		buzzer_stt = 0xFF;
+//	}
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -149,7 +159,7 @@ void EXTI15_10_IRQHandler(void)
 	}
 	else
 	{
-		if (__HAL_TIM_GET_COUNTER(&htim1) > 700)
+		if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
 		{
 			tempCode |= (1UL << (31-bitIndex));   // write 1
 		}
