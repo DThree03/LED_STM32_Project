@@ -73,12 +73,12 @@ volatile uint32_t uCountDelay = 0;
 
 volatile uint8_t Task1_Flag = 0;
 volatile uint8_t Task2_Flag = 0;
-//volatile uint8_t task100ms_flag = 0;
-//volatile uint8_t buzzer_stt = 0xFF;
+volatile uint8_t task100ms_flag = 0;
+volatile uint8_t buzzer_stt = 0xFF;
 
 volatile uint32_t IRcode = 0;
 /* Private variables ---------------------------------------------------------*/
-static uint8_t buzzer_stt = 0xFF;
+//static uint8_t buzzer_stt = 0xFF;
 static uint16_t button_cnt_t = 0;
 static uint8_t pTask_1st_Flag;
 static uint8_t pCfg_1st_state_Flag = 1;
@@ -497,20 +497,21 @@ void Task_Mode_Cfg(void)
 
 uint8_t Task_User_1stInit(uint8_t readFlash)
 {
+	int i;
 	//Read from FLASH
-	if(readFlash)
+	if (readFlash)
 		Task_Read_Cfg();
 
-	if(PlayCfg.Parameter.playing_mode < 2){
+	if (PlayCfg.Parameter.playing_mode < 2){
 		PlayCfg.Parameter.playing_mode = 4;
-		//return 0;
 	}
 	stop_time = 1;
 
-	for(int i=0;i<PlayCfg.Parameter.playing_mode;i++)
-	{
+	for(i=0;i<PlayCfg.Parameter.playing_mode;i++){
 		Player[i].addr = i+1;
 	}
+	if(i==2)
+		Player[1].addr = 4;
 
 	return 1;
 }
@@ -943,9 +944,9 @@ uint8_t Task_Run_TestMode(void)
 
 void Task_100ms(void)
 {
-//	if(task100ms_flag == 0)
-//		return;
-//	task100ms_flag = 0;
+	if(task100ms_flag == 0)
+		return;
+	task100ms_flag = 0;
 	if(IRcode == IR_STOP_CODE)
 	{
 		IRcode = 0;
@@ -957,14 +958,14 @@ void Task_100ms(void)
 			stop_time = 1;
 		}
 	}
-	if((buzzer_stt > 0) && (buzzer_stt != 0xFF)){
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
-		buzzer_stt--;
-	}
-	else if(buzzer_stt == 0){
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
-		buzzer_stt = 0xFF;
-	}
+//	if((buzzer_stt > 0) && (buzzer_stt != 0xFF)){
+//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+//		buzzer_stt--;
+//	}
+//	else if(buzzer_stt == 0){
+//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+//		buzzer_stt = 0xFF;
+//	}
 
 	if(stop_time)
 		return;

@@ -55,26 +55,28 @@ static void Delay_us(unsigned long us);
 
 static void Led7TurnTime_Start(void);
 static void Led7TurnTime_Stop(void);
-static void Led7TurnTime_Cask(void);
+static uint8_t Led7TurnTime_Cask(void);
 static void Led7TurnTime_Write(unsigned char oneByte);
 static void Led7TurnTime_PWM(unsigned char oneByte);
 
 static void Led7HitCnt_Start(void);
 static void Led7HitCnt_Stop(void);
-static void Led7HitCnt_Cask(void);
+static uint8_t Led7HitCnt_Cask(void);
 static void Led7HitCnt_Write(unsigned char oneByte);
 static void Led7HitCnt_PWM(unsigned char oneByte);
 
 
 static void Led7RoundTime_Start(void);
 static void Led7RoundTime_Stop(void);
-static void Led7RoundTime_Cask(void);
+static uint8_t Led7RoundTime_Cask(void);
 static void Led7RoundTime_Write(unsigned char oneByte);
 static void Led7RoundTime_PWM(unsigned char oneByte);
 
 /* Public function -----------------------------------------------------------*/
 void Led7TurnTime_Display(int led7ch, int led7dv, int led_num_left, int led_num_right)
 {
+	__disable_irq();
+
 	VALUE_SHOW_LED[4] = led7ch;
 	VALUE_SHOW_LED[5] = led7dv;
 
@@ -111,10 +113,14 @@ void Led7TurnTime_Display(int led7ch, int led7dv, int led_num_left, int led_num_
 	Led7TurnTime_Stop();
 
 	Led7TurnTime_PWM(PWM8);
+
+	__enable_irq();
 }
 
 void Led7HitCnt_Display(int slc_ch, int slc_dv, int sct_ch, int sct_dv)
 {
+	__disable_irq();
+
 	VALUE_SHOW_LED_2[3] = slc_ch;
 	VALUE_SHOW_LED_2[4] = slc_dv;
 
@@ -151,11 +157,15 @@ void Led7HitCnt_Display(int slc_ch, int slc_dv, int sct_ch, int sct_dv)
 	Led7HitCnt_Stop();
 
 	Led7HitCnt_PWM(PWM8);
+
+	__enable_irq();
 }
 
 
 void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv, uint8_t led)
 {
+	__disable_irq();
+
 	VALUE_SHOW_LED_3[4] = h_ch;
 	VALUE_SHOW_LED_3[3] = h_dv;
 
@@ -194,6 +204,8 @@ void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv, uint8_t led)
 	Led7RoundTime_Stop();
 
 	Led7RoundTime_PWM(PWM8);
+
+	__enable_irq();
 }
 
 /* Private function prototypes -----------------------------------------------*/
@@ -228,15 +240,18 @@ static void Led7TurnTime_Write(unsigned char oneByte)
 	}
 }
 
-static void Led7TurnTime_Cask(void)
+static uint8_t Led7TurnTime_Cask(void)
 {
 	TM1637_CLK1_OFF;
 	Delay_us(5); //
 	TM1637_GPIO_INIT(TM1637_DIO1_PIN, GPIO_MODE_INPUT);
-	while(TM1637_DIO1_READ);
+	//while(TM1637_DIO1_READ);
+	if(TM1637_DIO1_READ)
+		return 0xFF;
 	TM1637_CLK1_ON;
 	Delay_us(2);
 	TM1637_CLK1_OFF;
+	return 1;
 }
 
 static void Led7TurnTime_Stop(void)
@@ -291,15 +306,18 @@ static void Led7HitCnt_Write(unsigned char oneByte)
 	}
 }
 
-static void Led7HitCnt_Cask(void)
+static uint8_t Led7HitCnt_Cask(void)
 {
 	TM1637_CLK2_OFF;
 	Delay_us(5); //
 	TM1637_GPIO_INIT(TM1637_DIO2_PIN, GPIO_MODE_INPUT);
-	while(TM1637_DIO2_READ);
+	//while(TM1637_DIO2_READ);
+	if(TM1637_DIO2_READ)
+		return 0xFF;
 	TM1637_CLK2_ON;
 	Delay_us(2);
 	TM1637_CLK2_OFF;
+	return 1;
 }
 
 static void Led7HitCnt_Stop(void)
@@ -354,15 +372,18 @@ static void Led7RoundTime_Write(unsigned char oneByte)
 	}
 }
 
-static void Led7RoundTime_Cask(void)
+static uint8_t Led7RoundTime_Cask(void)
 {
 	TM1637_CLK3_OFF;
 	Delay_us(5); //
 	TM1637_GPIO_INIT(TM1637_DIO3_PIN, GPIO_MODE_INPUT);
-	while(TM1637_DIO3_READ);
+	//while(TM1637_DIO3_READ);
+	if(TM1637_DIO3_READ)
+		return 0xFF;
 	TM1637_CLK3_ON;
 	Delay_us(2);
 	TM1637_CLK3_OFF;
+	return 1;
 }
 
 static void Led7RoundTime_Stop(void)
