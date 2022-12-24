@@ -58,6 +58,9 @@ UART_HandleTypeDef huart3;
 static eUSER_TASK_STATE eUserTask_State = E_STATE_STARTUP;
 static uint8_t Playing_Stt;
 static uint16_t button_press_cnt = 0;
+
+volatile uint32_t tempCode;
+volatile uint8_t bitIndex;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,6 +69,8 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM1_Init(void);
+
+extern volatile uint32_t IRcode;
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -328,7 +333,7 @@ int main(void)
 		 case E_STATE_RUN_MODE:
 		 {
 			 Task_led_xl(0, 0x0F);
-			 Task_TestMode_Display(0);
+			 Task_TestMode_Display(0, IRcode);
 			 while(1){
 				if(Task_Run_TestMode()){
 					eUserTask_State = E_STATE_STARTUP;
@@ -599,7 +604,40 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if(GPIO_Pin == IR_SIGNAL_Pin) {
+	if(HAL_GPIO_ReadPin(IR_SIGNAL_GPIO_Port, IR_SIGNAL_Pin) == GPIO_PIN_RESET)
+	{
+		__HAL_TIM_SET_COUNTER(&htim1, 0);
+	}
+	else
+	{
+		if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
+		{
+			tempCode |= (1UL << (31-bitIndex));   // write 1
+		}
+		else
+		{
+			tempCode &= ~(1UL << (31-bitIndex));  // write 0
+		}
 
+		bitIndex++;
+		if(bitIndex == 24)
+		{
+			IRcode = tempCode >> 8; // Second last 8 bits
+			//if((int)IRcode != (int)IR_LEDXL_CODE)
+			 //Do your main work HERE
+			//printf("IR Code 0x%x\n", (int)IRcode);
+
+			tempCode = 0;
+			bitIndex = 0;
+		}
+	}
+  } else {
+      __NOP();
+  }
+}
 //void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 //{
 //	vGetIOButtonValue(eButton1, HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin), &strOld_Button_Value, &strIO_Button_Value);

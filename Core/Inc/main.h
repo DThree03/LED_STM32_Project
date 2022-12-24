@@ -41,7 +41,8 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern volatile uint32_t tempCode;
+extern volatile uint8_t bitIndex;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/

@@ -45,8 +45,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-static volatile uint32_t tempCode;
-static volatile uint8_t bitIndex;
+//static volatile uint32_t tempCode;
+//static volatile uint8_t bitIndex;
 
 /* USER CODE END PV */
 
@@ -75,7 +75,7 @@ extern volatile uint8_t Task2_Flag;
 extern volatile uint8_t task100ms_flag;
 extern volatile uint8_t buzzer_stt;
 
-extern volatile uint32_t IRcode;
+//extern volatile uint32_t IRcode;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -153,32 +153,7 @@ void USART3_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-	if(HAL_GPIO_ReadPin(IR_SIGNAL_GPIO_Port, IR_SIGNAL_Pin) == GPIO_PIN_RESET)
-	{
-		__HAL_TIM_SET_COUNTER(&htim1, 0);
-	}
-	else
-	{
-		if (__HAL_TIM_GET_COUNTER(&htim1) > 1000)
-		{
-			tempCode |= (1UL << (31-bitIndex));   // write 1
-		}
-		else
-		{
-			tempCode &= ~(1UL << (31-bitIndex));  // write 0
-		}
 
-		bitIndex++;
-		if(bitIndex == 24)
-		{
-			IRcode = tempCode >> 8; // Second last 8 bits
-			 //Do your main work HERE
-			//printf("IR Code 0x%x\n", (int)IRcode);
-
-			tempCode = 0;
-			bitIndex = 0;
-		}
-	}
 
   /* USER CODE END EXTI15_10_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(IR_SIGNAL_Pin);

@@ -20,6 +20,11 @@
 #define BUTTON_ACTIVE		GPIO_PIN_SET
 #define BUTTON_DELAY		20
 
+#define IR_LEDXL_CODE		0x908908
+#define IR_NEXT_CODE		0x904904
+#define IR_PUSH_CODE		0x910910
+#define IR_STOP_CODE		0x920920
+
 extern volatile uint32_t IRcode;
 /* Public function prototypes ------------------------------------------------*/
 void Task_Read_Cfg(void);
@@ -34,7 +39,7 @@ uint8_t Task_Round_Init(void);
 
 uint8_t Task_Playing(void);
 
-void Task_TestMode_Display(uint8_t global_num);
+void Task_TestMode_Display(uint8_t global_num, uint32_t irCODE);
 
 uint8_t Task_Run_TestMode(void);
 
