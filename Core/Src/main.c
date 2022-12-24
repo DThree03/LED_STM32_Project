@@ -150,7 +150,7 @@ int main(void)
 
 			 while(1)
 			 {
-				 Task_100ms();
+				 //Task_100ms();
 				 if(POWER_BUT_VAL == BUTTON_ACTIVE){
 					 delay_ms(BUTTON_DELAY);
 					 if(POWER_BUT_VAL == BUTTON_ACTIVE){
@@ -333,7 +333,6 @@ int main(void)
 				if(Task_Run_TestMode()){
 					eUserTask_State = E_STATE_STARTUP;
 				}
-				Task_100ms();
 				if(eUserTask_State!=E_STATE_RUN_MODE)
 					break;
 			 }
@@ -590,7 +589,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : IR_SIGNAL_Pin */
   GPIO_InitStruct.Pin = IR_SIGNAL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(IR_SIGNAL_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/

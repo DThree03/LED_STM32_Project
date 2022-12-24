@@ -855,11 +855,11 @@ uint8_t Task_Playing(void)
 
 void Task_TestMode_Display(uint8_t global_num)
 {
-	buzzer_stt = 1;
 	static uint8_t lednum = 16;
+	buzzer_stt = 1;
+
 	Task_Led_StartPoint(global_num, global_num, global_num);
 
-	//Led7TurnTime_Display(global_num, global_num, 8, 8);
 	if(lednum%16>7)
 		Led7TurnTime_Display(global_num/10, global_num%10, 8, (lednum%8));
 	else

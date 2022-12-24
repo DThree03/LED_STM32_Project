@@ -1,6 +1,6 @@
-../Core/Src/TM1637_MAIN.c:76:6:Led7TurnTime_Display	24	static,ignoring_inline_asm
-../Core/Src/TM1637_MAIN.c:120:6:Led7HitCnt_Display	24	static,ignoring_inline_asm
-../Core/Src/TM1637_MAIN.c:165:6:Led7RoundTime_Display	24	static,ignoring_inline_asm
+../Core/Src/TM1637_MAIN.c:76:6:Led7TurnTime_Display	24	static
+../Core/Src/TM1637_MAIN.c:120:6:Led7HitCnt_Display	24	static
+../Core/Src/TM1637_MAIN.c:165:6:Led7RoundTime_Display	24	static
 ../Core/Src/TM1637_MAIN.c:212:13:Led7TurnTime_Start	8	static
 ../Core/Src/TM1637_MAIN.c:221:13:Led7TurnTime_Write	24	static
 ../Core/Src/TM1637_MAIN.c:243:16:Led7TurnTime_Cask	8	static

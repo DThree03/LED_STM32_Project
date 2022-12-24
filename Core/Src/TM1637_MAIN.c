@@ -75,7 +75,7 @@ static void Led7RoundTime_PWM(unsigned char oneByte);
 /* Public function -----------------------------------------------------------*/
 void Led7TurnTime_Display(int led7ch, int led7dv, int led_num_left, int led_num_right)
 {
-	__disable_irq();
+	//__disable_irq();
 
 	VALUE_SHOW_LED[4] = led7ch;
 	VALUE_SHOW_LED[5] = led7dv;
@@ -114,12 +114,12 @@ void Led7TurnTime_Display(int led7ch, int led7dv, int led_num_left, int led_num_
 
 	Led7TurnTime_PWM(PWM8);
 
-	__enable_irq();
+	//__enable_irq();
 }
 
 void Led7HitCnt_Display(int slc_ch, int slc_dv, int sct_ch, int sct_dv)
 {
-	__disable_irq();
+	//__disable_irq();
 
 	VALUE_SHOW_LED_2[3] = slc_ch;
 	VALUE_SHOW_LED_2[4] = slc_dv;
@@ -158,13 +158,13 @@ void Led7HitCnt_Display(int slc_ch, int slc_dv, int sct_ch, int sct_dv)
 
 	Led7HitCnt_PWM(PWM8);
 
-	__enable_irq();
+	//__enable_irq();
 }
 
 
 void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv, uint8_t led)
 {
-	__disable_irq();
+	//__disable_irq();
 
 	VALUE_SHOW_LED_3[4] = h_ch;
 	VALUE_SHOW_LED_3[3] = h_dv;
@@ -205,7 +205,7 @@ void Led7RoundTime_Display(int h_ch, int h_dv, int m_ch, int m_dv, uint8_t led)
 
 	Led7RoundTime_PWM(PWM8);
 
-	__enable_irq();
+	//__enable_irq();
 }
 
 /* Private function prototypes -----------------------------------------------*/
