@@ -20,6 +20,7 @@
 #define BUTTON_ACTIVE		GPIO_PIN_SET
 #define BUTTON_DELAY		20
 
+extern volatile uint32_t IRcode;
 /* Public function prototypes ------------------------------------------------*/
 void Task_Read_Cfg(void);
 
