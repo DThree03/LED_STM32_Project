@@ -861,9 +861,9 @@ void Task_TestMode_Display(uint8_t global_num)
 	Task_Led_StartPoint(global_num, global_num, global_num);
 
 	if(lednum%16>7)
-		Led7TurnTime_Display(global_num/10, global_num%10, 8, (lednum%8));
+		Led7TurnTime_Display(global_num, global_num, 8, (lednum%8));
 	else
-		Led7TurnTime_Display(global_num/10, global_num%10, lednum%8, 0);
+		Led7TurnTime_Display(global_num, global_num, lednum%8, 0);
 
 	Led7HitCnt_Display(global_num, global_num, global_num, global_num);
 	Led7RoundTime_Display(global_num, global_num, global_num, global_num, 1);
