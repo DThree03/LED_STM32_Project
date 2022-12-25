@@ -567,6 +567,8 @@ uint8_t Task_Round_Init(void)
 	turn_time_s = PlayCfg.Parameter.turn_time_s;
 	rount_time_s = PlayCfg.Parameter.rount_time_s * PlayCfg.Parameter.mode_signed;
 
+	if(PlayCfg.Parameter.playing_mode==2)
+		Player[1].addr = 4;
 	//Player Data update
 	for(int i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{
@@ -626,10 +628,6 @@ uint8_t Task_Playing(void)
 
 	if((IRcode != 0) && (IRcode != (int)IR_LEDXL_CODE) && (IRcode != (int)IR_NEXT_CODE) && (IRcode != (int)IR_PUSH_CODE) && (IRcode != (int)IR_STOP_CODE))
 	{
-//		printf("ADDR%d%d%d%d%d%d%d%d%d%d%d%d%x\n", (int)Player[current_player].addr, (int)DATA_LED7_TYPE,
-//						(int)0, (int)0, (int)0, (int)0, (int)0,
-//						(int)0, (int)0, (int)0, (int)0, (int)0, (int)IRcode);
-//		printf("ADDR%d%d\n", (int)Player[current_player].addr, (int)UPDATE_LED7_TYPE);
 		delay_ms(300);
 		tempCode = 0;
 		bitIndex = 0;
@@ -639,9 +637,6 @@ uint8_t Task_Playing(void)
 	if((PLUS_BUT_VAL == BUTTON_ACTIVE) || ((int)IRcode == (int)IR_PUSH_CODE)){
 		delay_ms((int)BUTTON_DELAY);
 		if((PLUS_BUT_VAL == BUTTON_ACTIVE) || ((int)IRcode == (int)IR_PUSH_CODE)){
-//			IRcode = 0;
-//			tempCode = 0;
-//			bitIndex = 0;
 
 			turn_time_s = PlayCfg.Parameter.turn_time_s;
 			hit_get_point_cnt++;
@@ -713,8 +708,8 @@ uint8_t Task_Playing(void)
 			//Send Display
 			Task_Upload_Display();
 			IRcode = 0;
-						tempCode = 0;
-						bitIndex = 0;
+			tempCode = 0;
+			bitIndex = 0;
 			buzzer_stt = 1;
 
 			while(PLUS_BUT_VAL == BUTTON_ACTIVE)
@@ -735,7 +730,21 @@ uint8_t Task_Playing(void)
 		delay_ms((int)BUTTON_DELAY);
 		if(MINUS_BUT_VAL == BUTTON_ACTIVE){
 
-			turn_time_s = PlayCfg.Parameter.turn_time_s;
+			//turn_time_s = PlayCfg.Parameter.turn_time_s;
+			if(hit_get_point_cnt > 0)
+				hit_get_point_cnt--;
+			//Update CTCN
+			if(hit_get_point_cnt < Player[current_player].max_hit_get_point)
+				Player[current_player].max_hit_get_point = hit_get_point_cnt;
+
+			if((hit_get_point_cnt < 100) && (all_turn_cnt < 100)){
+				Led7HitCnt_Display(all_turn_cnt/10, all_turn_cnt%10, hit_get_point_cnt/10, hit_get_point_cnt%10);
+			}
+
+			Player[current_player].average = (last_average*(all_turn_cnt-1) + hit_get_point_cnt)/(float)all_turn_cnt;
+			if(Player[current_player].average>99.99)
+				Player[current_player].average = 99.99;
+
 			if(PlayCfg.Parameter.mode_signed)
 			{
 				point_plus = get_player_available() - 1;
@@ -809,9 +818,6 @@ uint8_t Task_Playing(void)
 	else if((NEXT_BUT_VAL == BUTTON_ACTIVE) || ((int)IRcode == (int)IR_NEXT_CODE)){
 		delay_ms((int)BUTTON_DELAY);
 		if((NEXT_BUT_VAL == BUTTON_ACTIVE) || ((int)IRcode == (int)IR_NEXT_CODE)){
-//			IRcode = 0;
-//			tempCode = 0;
-//			bitIndex = 0;
 
 			uint8_t temp_play = get_next_user(current_player);
 			if(temp_play == 0xFF)
@@ -1179,10 +1185,11 @@ static uint8_t get_next_user(uint8_t current_play)
 	uint8_t temp_user_buff[4];
 	int i, j;
 
-	if(PlayCfg.Parameter.mode_signed == 0)
+	if((PlayCfg.Parameter.mode_signed == 0) || (PlayCfg.Parameter.playing_mode == 2))
 	{
 		return (current_play+1)%PlayCfg.Parameter.playing_mode;
 	}
+
 
 	for(i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{

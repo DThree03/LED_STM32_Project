@@ -244,6 +244,7 @@ int main(void)
 		 case E_STATE_POWER_ON:
 		 {
 			 //Send data ON LXL
+			 Task_led_xl(0, 0x00);
 			 Task_Round_Init();
 			 HAL_GPIO_TogglePin(LED_Y_GPIO_Port, LED_Y_Pin);
 			 while(1)
