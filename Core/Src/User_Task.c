@@ -891,7 +891,7 @@ uint8_t Task_Playing(void)
 							Task_Blink_Line(i+1, 0, 1);
 						}
 						buzzer_stt = 1;
-						if((PlayCfg.Parameter.mode_signed) && (PlayCfg.Parameter.playing_mode > 3)){
+						if((PlayCfg.Parameter.mode_signed) && (PlayCfg.Parameter.playing_mode > 2)){
 							if(get_player_available() == 1){
 								return 0xFF;
 							}
@@ -1085,7 +1085,8 @@ void Task_100ms(void)
 			}
 			else if(turn_time_s>7){
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, 8, (turn_time_s%8));
-				buzzer_stt = 1;
+				if(turn_time_s <= 10)
+					buzzer_stt = 1;
 			}
 			else{
 				Led7TurnTime_Display(turn_time_s/10, turn_time_s%10, turn_time_s%8, 0);
@@ -1216,13 +1217,18 @@ static uint8_t get_next_user(uint8_t current_play)
 
 static void update_rand_addr(void)
 {
+	static uint8_t shift_flag = 0;
 	uint16_t rand_input = sys_millis;
 	uint8_t temp_user_buff[4];
 	uint8_t temp_addr_buff[4];
 	int i, j;
-	for(i=0;i<(int)MAX_PLAYER_NUM;i++)
+
+	if(PlayCfg.Parameter.playing_mode < 3)
+		return;
+
+	for(i=0;i<(int)PlayCfg.Parameter.playing_mode;i++)
 	{
-		for(j=0;j<(int)MAX_PLAYER_NUM;j++)
+		for(j=0;j<(int)PlayCfg.Parameter.playing_mode;j++)
 		{
 			if(Player[j].addr == (i+1)){
 				temp_user_buff[i] = j;
@@ -1230,6 +1236,21 @@ static void update_rand_addr(void)
 				break;
 			}
 		}
+	}
+
+	if((int)PlayCfg.Parameter.playing_mode == 3){
+		if(shift_flag){
+			Player[temp_user_buff[0]].addr = temp_addr_buff[1];
+			Player[temp_user_buff[1]].addr = temp_addr_buff[0];
+			Player[temp_user_buff[2]].addr = temp_addr_buff[2];
+		}
+		else{
+			Player[temp_user_buff[0]].addr = temp_addr_buff[2];
+			Player[temp_user_buff[1]].addr = temp_addr_buff[1];
+			Player[temp_user_buff[2]].addr = temp_addr_buff[0];
+		}
+		shift_flag = 1 - shift_flag;
+		return;
 	}
 
 	Player[temp_user_buff[0]].addr = temp_addr_buff[1];
