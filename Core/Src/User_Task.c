@@ -131,7 +131,7 @@ void Task_Save_Cfg(void)
 void Task_Mode_Cfg(void)
 {
 	static eUSER_CFG_STATE cfg_state_t = E_CFG_START_POINT;
-	//static uint8_t pCfg_1st_state_Flag = 1;
+
 	switch(cfg_state_t)
 	{
 		case E_CFG_START_POINT:
@@ -148,8 +148,10 @@ void Task_Mode_Cfg(void)
 					IRcode = 0;
 					tempCode = 0;
 					bitIndex = 0;
-					if(PlayCfg.Parameter.start_point<99)
+					if(PlayCfg.Parameter.start_point<999)
 						PlayCfg.Parameter.start_point++;
+					else
+						PlayCfg.Parameter.start_point = 0;
 					//Update Display
 					Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 					buzzer_stt = 1;
@@ -175,6 +177,8 @@ void Task_Mode_Cfg(void)
 					bitIndex = 0;
 					if(PlayCfg.Parameter.start_point > 0)
 						PlayCfg.Parameter.start_point--;
+					else
+						PlayCfg.Parameter.start_point = 999;
 					//Update Display
 					Task_Led_StartPoint(PlayCfg.Parameter.start_point/100, (PlayCfg.Parameter.start_point%100)/10, PlayCfg.Parameter.start_point%10);
 					buzzer_stt = 1;
@@ -217,11 +221,6 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-//			else if((IRcode != 0) || (tempCode != 0) || (bitIndex != 0)){
-//				IRcode = 0;
-//				tempCode = 0;
-//				bitIndex = 0;
-//			}
 			break;
 		}
 		case E_CFG_ROUNDTIME_M:
@@ -316,11 +315,6 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-//			else if((IRcode != 0) || (tempCode != 0) || (bitIndex != 0)){
-//				IRcode = 0;
-//				tempCode = 0;
-//				bitIndex = 0;
-//			}
 			break;
 		}
 		case E_CFG_TURNTIME_S:
@@ -409,11 +403,6 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-//			else if((IRcode != 0) || (tempCode != 0) || (bitIndex != 0)){
-//				IRcode = 0;
-//				tempCode = 0;
-//				bitIndex = 0;
-//			}
 			break;
 		}
 		case E_CFG_START_MODE:
@@ -527,11 +516,6 @@ void Task_Mode_Cfg(void)
 					button_cnt_t = 0;
 				}
 			}
-//			else if((IRcode != 0) || (tempCode != 0) || (bitIndex != 0)){
-//				IRcode = 0;
-//				tempCode = 0;
-//				bitIndex = 0;
-//			}
 			break;
 		}
 	}
@@ -1045,15 +1029,6 @@ void Task_100ms(void)
 		return;
 	task100ms_flag = 0;
 
-//	if((buzzer_stt > 0) && (buzzer_stt != 0xFF)){
-//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
-//		buzzer_stt--;
-//	}
-//	else if(buzzer_stt == 0){
-//		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
-//		buzzer_stt = 0xFF;
-//	}
-
 	if(stop_time)
 		return;
 
@@ -1155,18 +1130,17 @@ static void update_led7_data(uint8_t player_num)
 //		printf("ADDR%d%d%d%d%d%d%d%d%d%d%d%d%x\n", (int)Player[player_num].addr, (int)DATA_LED7_TYPE,
 //				(int)0, (int)0, (int)0, (int)0, (int)0,
 //				(int)0, (int)0, (int)0, (int)0, (int)0, (int)IRcode);
+//		return;
 //	}
-//	else{
-		printf("ADDR%d%dEE%dE%03d%04d%02d%c%02d\n",
-				(int)Player[player_num].addr,
-				(int)DATA_LED7_TYPE,
-				(int)(player_num+1),
-				(int)Player[player_num].point,
-				(int)(Player[player_num].average*100),
-				(int)Player[player_num].max_hit_get_point,
-				Player[player_num].sum_signed==0?'E':'D',
-				(int)Player[player_num].sum_point);
-//	}
+	printf("ADDR%d%dEE%dE%03d%04d%02d%c%02d\n",
+			(int)Player[player_num].addr,
+			(int)DATA_LED7_TYPE,
+			(int)(player_num+1),
+			(int)Player[player_num].point,
+			(int)(Player[player_num].average*100),
+			(int)Player[player_num].max_hit_get_point,
+			Player[player_num].sum_signed==0?'E':'D',
+			(int)Player[player_num].sum_point);
 }
 
 static uint8_t get_player_available(void)
@@ -1186,11 +1160,9 @@ static uint8_t get_next_user(uint8_t current_play)
 	uint8_t temp_user_buff[4];
 	int i, j;
 
-	if((PlayCfg.Parameter.mode_signed == 0) || (PlayCfg.Parameter.playing_mode == 2))
-	{
+	if((PlayCfg.Parameter.mode_signed == 0) || (PlayCfg.Parameter.playing_mode == 2)){
 		return (current_play+1)%PlayCfg.Parameter.playing_mode;
 	}
-
 
 	for(i=0;i<PlayCfg.Parameter.playing_mode;i++)
 	{
